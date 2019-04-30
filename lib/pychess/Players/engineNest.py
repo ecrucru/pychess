@@ -457,8 +457,8 @@ class EngineDiscoverer(GObject.GObject):
                     result["protover"] = 2
                 if engine.protocol == "uci":
                     result["analyze"] = True
-                # if engine.elo > 0:
-                #     result["elo"] = engine.elo
+                if engine.elo > 0:
+                    result["elo"] = engine.elo
 
                 # Attached interpreter
                 ext = os.path.splitext(name.lower())[1]
