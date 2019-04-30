@@ -8,18 +8,17 @@ import asyncio
 import websockets
 import base64
 import string
-import random
+from random import choice, randint
 
-from pychess import VERSION
 from pychess.Utils.const import FISCHERRANDOMCHESS
 from pychess.Utils.lutils.LBoard import LBoard
 from pychess.Utils.lutils.lmove import parseAny, toSAN
 from pychess.System.Log import log
+from pychess.System.useragent import generate_user_agent
 
 # import pdb
 # def _(p):
 #     return p
-# VERSION = '1.0'
 # import ssl
 # ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -32,7 +31,7 @@ class InternetGameInterface:
     # Internal
     def __init__(self):
         self.id = None
-        self.userAgent = 'PyChess %s' % VERSION
+        self.userAgent = generate_user_agent(fake=True)
 
     def is_enabled(self):
         return True
@@ -820,8 +819,8 @@ class InternetGameChessOrg(InternetGameInterface):
             return None
 
         # Random elements to get a unique URL
-        rndI = random.randint(1, 1000)
-        rndS = ''.join(random.choice(string.ascii_lowercase) for i in range(8))
+        rndI = randint(1, 1000)
+        rndS = ''.join(choice(string.ascii_lowercase) for i in range(8))
 
         # Open a websocket to retrieve the chess data
         @asyncio.coroutine
