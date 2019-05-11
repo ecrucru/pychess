@@ -24,6 +24,7 @@ from pychess.System.useragent import generate_user_agent
 
 
 TYPE_NONE, TYPE_GAME, TYPE_STUDY, TYPE_PUZZLE = range(4)
+CHESS960 = "fischerandom"
 
 
 # Abstract class to download a game from the Internet
@@ -329,6 +330,7 @@ class InternetGameLichess(InternetGameInterface):
             return self.rebuild_pgn(game)
 
         else:
+            assert(False)
             return None  # Never reached
 
 
@@ -518,7 +520,7 @@ class InternetGameChess24(InternetGameInterface):
                         board.applyFen(kfen)
                     except Exception:
                         return None
-                    game['Variant'] = 'Fischerandom'
+                    game['Variant'] = CHESS960
                     game['SetUp'] = '1'
                     game['FEN'] = kfen
                     head_complete = True
@@ -878,7 +880,7 @@ class InternetGameChessOrg(InternetGameInterface):
         if startPos not in ['', 'startpos']:
             game['SetUp'] = '1'
             game['FEN'] = startPos
-            game['Variant'] = 'Fischerandom'
+            game['Variant'] = CHESS960
             try:
                 board.applyFen(startPos)
             except Exception:
@@ -1155,6 +1157,8 @@ class InternetGameChessCom(InternetGameInterface):
                 game = {}
             else:
                 game = headers
+            if 'Variant' in game and game['Variant'] == 'Chess960':
+                game['Variant'] = CHESS960
             game['_url'] = url
 
             # Body
@@ -1162,7 +1166,7 @@ class InternetGameChessCom(InternetGameInterface):
             if moves == '':
                 return None
             game['_moves'] = ''
-            board = LBoard()
+            board = LBoard(variant=FISCHERRANDOMCHESS)
             if 'FEN' in game:
                 board.applyFen(game['FEN'])
             else:
