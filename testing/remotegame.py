@@ -31,6 +31,7 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('http://fr.lichess.org/@/thibault', False),                       # Not a game (user page)
                  ('http://lichess.org/blog', False),                                # Not a game (page)
                  ('http://lichess.dev/ABCD1234', False),                            # Not a game (wrong ID)
+                 ('https://lichess.org/9y4KpPyG', True),                            # Variant game Chess960
                  ('https://LICHESS.org/nGhOUXdP?p=0', True),                        # Variant game with parameter
                  ('https://lichess.org/nGhOUXdP?p=0#3', True),                      # Variant game with parameter and anchor
                  ('https://hu.lichess.org/study/hr4H7sOB?page=1', True),            # Study of one game with unused parameter

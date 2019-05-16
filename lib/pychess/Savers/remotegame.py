@@ -24,7 +24,7 @@ from pychess.System.useragent import generate_user_agent
 
 
 TYPE_NONE, TYPE_GAME, TYPE_STUDY, TYPE_PUZZLE = range(4)
-CHESS960 = "fischerandom"
+CHESS960 = "Fischerandom"
 
 
 # Abstract class to download a game from the Internet
@@ -224,6 +224,32 @@ class InternetGameLichess(InternetGameInterface):
         # Nothing found
         return False
 
+    def query_api(self, path):
+        response = urlopen(Request('https://lichess.%s%s' % (self.url_tld, path), headers={'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/vnd.lichess.v4+json'}))
+        bourne = self.read_data(response)
+        return self.json_loads(bourne)
+
+    def adjust_tags(self, pgn):
+        # Check
+        if pgn in [None, '']:
+            return pgn
+
+        # Replace the tags
+        reps = [('Variant', 'UltraBullet', 'Normal'),
+                ('Variant', 'Bullet', 'Normal'),
+                ('Variant', 'Blitz', 'Normal'),
+                ('Variant', 'Rapid', 'Normal'),
+                ('Variant', 'Classical', 'Normal'),
+                ('Variant', 'Correspondence', 'Normal'),
+                ('Variant', 'Standard', 'Normal'),
+                ('Variant', 'Chess960', CHESS960),
+                ('Variant', 'ThreeCheck', '3check'),
+                ('Variant', 'Antichess', 'Suicide')]  # TODO Use shared constants
+        for rep in reps:
+            tag, s, d = rep
+            pgn = pgn.replace('[%s "%s"]' % (tag, s), '[%s "%s"]' % (tag, d))
+        return pgn
+
     def download_game(self):
         # Check
         if None in [self.id, self.url_tld]:
@@ -231,8 +257,29 @@ class InternetGameLichess(InternetGameInterface):
 
         # Logic for the games
         if self.url_type == TYPE_GAME:
-            url = 'https://lichess.%s/game/export/%s?literate=1' % (self.url_tld, self.id)
-            return self.download(url)
+            # Download the finished game
+            api = self.query_api('/import/master/%s/white' % self.id)
+            if self.json_field(api, 'game/status/name') != 'started':
+                url = 'https://lichess.%s/game/export/%s?literate=1' % (self.url_tld, self.id)
+                return self.adjust_tags(self.download(url))
+
+            # Rebuild the PGN file
+            game = {}
+            game['_url'] = 'https://lichess.%s%s' % (self.url_tld, self.json_field(api, 'url/round'))
+            game['Variant'] = self.json_field(api, 'game/variant/key')
+            game['FEN'] = self.json_field(api, 'game/initialFen')
+            game['SetUp'] = '1'
+            game['White'] = self.json_field(api, 'player/user/username')
+            game['WhiteElo'] = self.json_field(api, 'player/rating')
+            game['Black'] = self.json_field(api, 'opponent/user/username')
+            game['BlackElo'] = self.json_field(api, 'opponent/rating')
+            game['Result'] = '*'
+            game['_moves'] = ''
+            moves = self.json_field(api, 'steps')
+            for move in moves:
+                if move['ply'] > 0:
+                    game['_moves'] += ' %s' % move['san']
+            return self.adjust_tags(self.rebuild_pgn(game))
 
         # Logic for the studies
         elif self.url_type == TYPE_STUDY:
@@ -241,6 +288,10 @@ class InternetGameLichess(InternetGameInterface):
 
         # Logic for the puzzles
         elif self.url_type == TYPE_PUZZLE:
+            # The API don't provide the history of the moves
+            # chessgame = self.query_api('/training/%s/load' % self.id)
+
+            # Fetch the puzzle
             url = 'https://lichess.%s/training/%s' % (self.url_tld, self.id)
             page = self.download(url)
             if page is None:
@@ -700,8 +751,8 @@ class InternetGameChessbomb(InternetGameInterface):
                     pos2 = data.find('"', pos1 + 1)
                     if -1 not in [pos1, pos2]:
                         try:
-                            self.json = base64.b64decode(data[pos1 + 1:pos2]).decode().strip()
-                            self.json = json.loads(self.json)
+                            bourne = base64.b64decode(data[pos1 + 1:pos2]).decode().strip()
+                            self.json = json.loads(bourne)
                         except Exception:
                             self.json = None
                             return
@@ -1039,6 +1090,7 @@ class InternetGameGameknot(InternetGameInterface):
                         if txt not in ['', '0']:
                             game[tag] = txt
                 else:
+                    assert(False)
                     return None
         if game['Result'] == '1':
             game['Result'] = '1-0'
@@ -1299,18 +1351,22 @@ def get_internet_game_as_pgn(url):
     p = urlparse(url.strip())
     if '' in [p.scheme, p.netloc]:
         return None
+    log.debug('URL to retrieve : %s' % url)
 
     # Download a game for each provider
     for prov in chess_providers:
         if not prov.is_enabled():
             continue
         if prov.assign_game(url):
+            log.debug('Responding chess provider : %s' % prov.get_description())
             try:
                 pgn = prov.download_game()
             except Exception:
                 pgn = None
             if pgn is None:
+                log.debug('Download failed')
                 continue
+            log.debug('Successful download')
 
             # Verify that it starts with the correct magic character (ex.: "<" denotes an HTML content, "[" a chess game, etc...)
             pgn = pgn.strip()
