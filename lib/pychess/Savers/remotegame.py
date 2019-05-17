@@ -103,7 +103,7 @@ class InternetGameInterface:
 
     def download(self, url, userAgent=False):
         # Check
-        if url is None or url == '':
+        if url in [None, '']:
             return None
 
         # Download
@@ -288,7 +288,7 @@ class InternetGameLichess(InternetGameInterface):
 
         # Logic for the puzzles
         elif self.url_type == TYPE_PUZZLE:
-            # The API don't provide the history of the moves
+            # The API doesn't provide the history of the moves
             # chessgame = self.query_api('/training/%s/load' % self.id)
 
             # Fetch the puzzle
@@ -1256,6 +1256,55 @@ class InternetGameChessCom(InternetGameInterface):
             return None  # Never reached
 
 
+# Schach-Spielen.eu
+class InternetGameSchachspielen(InternetGameInterface):
+    def get_description(self):
+        return 'Schach-Spielen.eu -- %s' % _('HTML parsing')
+
+    def assign_game(self, url):
+        rxp = re.compile('^https?:\/\/(www\.)?schach-spielen\.eu\/(game|analyse)\/([a-z0-9]+)[\/\?\#]?', re.IGNORECASE)
+        m = rxp.match(url)
+        if m is not None:
+            gid = m.group(3)
+            if len(gid) == 8:
+                self.id = gid
+                return True
+        return False
+
+    def download_game(self):
+        # Download
+        if self.id is None:
+            return None
+        page = self.download('https://www.schach-spielen.eu/analyse/%s' % self.id)
+        if page is None:
+            return None
+
+        # Definition of the parser
+        class schachspielenparser(HTMLParser):
+            def __init__(self):
+                HTMLParser.__init__(self)
+                self.tag_ok = False
+                self.pgn = None
+
+            def handle_starttag(self, tag, attrs):
+                if tag.lower() == 'textarea':
+                    for k, v in attrs:
+                        if k.lower() == 'id' and v == 'pgnText':
+                            self.tag_ok = True
+
+            def handle_data(self, data):
+                if self.pgn is None and self.tag_ok:
+                    self.pgn = data
+
+        # Read the PGN
+        parser = schachspielenparser()
+        parser.feed(page)
+        pgn = parser.pgn
+        if pgn is not None:
+            pgn = pgn.replace('[Variant "chess960"]', '[Variant "%s"]' % CHESS960)
+        return pgn
+
+
 # Generic
 class InternetGameGeneric(InternetGameInterface):
     def get_description(self):
@@ -1333,6 +1382,7 @@ chess_providers = [InternetGameLichess(),
                    InternetGameEuropeechecs(),
                    InternetGameGameknot(),
                    InternetGameChessCom(),
+                   InternetGameSchachspielen(),
                    InternetGameGeneric()]
 
 
@@ -1351,14 +1401,14 @@ def get_internet_game_as_pgn(url):
     p = urlparse(url.strip())
     if '' in [p.scheme, p.netloc]:
         return None
-    log.debug('URL to retrieve : %s' % url)
+    log.debug('URL to retrieve: %s' % url)
 
     # Download a game for each provider
     for prov in chess_providers:
         if not prov.is_enabled():
             continue
         if prov.assign_game(url):
-            log.debug('Responding chess provider : %s' % prov.get_description())
+            log.debug('Responding chess provider: %s' % prov.get_description())
             try:
                 pgn = prov.download_game()
             except Exception:

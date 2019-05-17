@@ -1,7 +1,7 @@
 import unittest
 import random
 
-from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameGeneric, get_internet_game_as_pgn
+from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameGeneric, get_internet_game_as_pgn
 
 
 class RemoteGameTestCase(unittest.TestCase):
@@ -15,13 +15,13 @@ class RemoteGameTestCase(unittest.TestCase):
 
         # Pick one link only to not overload the remote server
         url, expected = random.choice(links)
-        print('- Target link : %s' % url)
-        print('- Expecting data : %s' % expected)
+        print('- Target link: %s' % url)
+        print('- Expecting data: %s' % expected)
 
         # Download link
         data = get_internet_game_as_pgn(url)
         ok = data is not None
-        print('- Fetched data : %s' % ok)
+        print('- Fetched data: %s' % ok)
         self.assertEqual(ok, expected)
 
     def testLichess(self):
@@ -122,6 +122,15 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('https://chess.com/live/game/13029832074287114', False),                  # Not a game (wrong ID)
                  ('https://www.chess.com', False)]                                          # Not a game (homepage)
         self.executeTest(InternetGameChessCom(), links)
+
+    def testSchachspielen(self):
+        links = [('https://www.schach-spielen.eu/analyse/2jcpl1vs/black#test', True),   # Best game ever with anchor
+                 ('http://schach-SPIELEN.eu/game/2jcpl1vs?p=1', True),                  # Best game ever with parameter
+                 ('https://www.schach-spielen.eu/game/8kcevvdy/white', True),           # Chess960
+                 ('https://www.schach-spielen.eu/game/IENSUIEN', False),                # Not a game (wrong ID)
+                 ('https://www.schach-spielen.eu/about/8kcevvdy', False),               # Not a game (bad URL)
+                 ('https://www.schach-SPIELEN.eu', False)]                              # Not a game (homepage)
+        self.executeTest(InternetGameSchachspielen(), links)
 
     def testGeneric(self):
         links = [('https://thechessworld.com/pgngames/middlegames/sacrifice-on-e6/Ivanchuk-Karjakin.pgn', True)]    # Game with UTF-8 BOM
