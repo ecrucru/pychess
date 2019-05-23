@@ -2,7 +2,7 @@ import os
 import re
 import json
 from urllib.request import Request, urlopen
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, unquote
 from html.parser import HTMLParser
 import asyncio
 import websockets
@@ -24,7 +24,8 @@ from pychess.System.useragent import generate_user_agent
 
 
 TYPE_NONE, TYPE_GAME, TYPE_STUDY, TYPE_PUZZLE = range(4)
-CHESS960 = "Fischerandom"
+CHESS960 = 'Fischerandom'
+DEFAULT_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
 
 # Abstract class to download a game from the Internet
@@ -92,6 +93,7 @@ class InternetGameInterface:
                 try:
                     data = bytes.decode('latin-1')
                 except Exception:
+                    log.debug('Error in the decoding of the data')
                     data = None
 
         # Result
@@ -133,6 +135,7 @@ class InternetGameInterface:
             return pgn
 
     def async_from_sync(self, coro):
+        # TODO Not working under Linux
         curloop = asyncio.get_event_loop()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -264,22 +267,23 @@ class InternetGameLichess(InternetGameInterface):
                 return self.adjust_tags(self.download(url))
 
             # Rebuild the PGN file
-            game = {}
-            game['_url'] = 'https://lichess.%s%s' % (self.url_tld, self.json_field(api, 'url/round'))
-            game['Variant'] = self.json_field(api, 'game/variant/key')
-            game['FEN'] = self.json_field(api, 'game/initialFen')
-            game['SetUp'] = '1'
-            game['White'] = self.json_field(api, 'player/user/username')
-            game['WhiteElo'] = self.json_field(api, 'player/rating')
-            game['Black'] = self.json_field(api, 'opponent/user/username')
-            game['BlackElo'] = self.json_field(api, 'opponent/rating')
-            game['Result'] = '*'
-            game['_moves'] = ''
-            moves = self.json_field(api, 'steps')
-            for move in moves:
-                if move['ply'] > 0:
-                    game['_moves'] += ' %s' % move['san']
-            return self.adjust_tags(self.rebuild_pgn(game))
+            else:
+                game = {}
+                game['_url'] = 'https://lichess.%s%s' % (self.url_tld, self.json_field(api, 'url/round'))
+                game['Variant'] = self.json_field(api, 'game/variant/key')
+                game['FEN'] = self.json_field(api, 'game/initialFen')
+                game['SetUp'] = '1'
+                game['White'] = self.json_field(api, 'player/user/username')
+                game['WhiteElo'] = self.json_field(api, 'player/rating')
+                game['Black'] = self.json_field(api, 'opponent/user/username')
+                game['BlackElo'] = self.json_field(api, 'opponent/rating')
+                game['Result'] = '*'
+                game['_moves'] = ''
+                moves = self.json_field(api, 'steps')
+                for move in moves:
+                    if move['ply'] > 0:
+                        game['_moves'] += ' %s' % move['san']
+                return self.adjust_tags(self.rebuild_pgn(game))
 
         # Logic for the studies
         elif self.url_type == TYPE_STUDY:
@@ -1026,101 +1030,150 @@ class InternetGameEuropeechecs(InternetGameInterface):
 class InternetGameGameknot(InternetGameInterface):
     def __init__(self):
         InternetGameInterface.__init__(self)
+        self.url_type = TYPE_NONE
         self.use_an = True  # True to rebuild a readable PGN
 
     def get_description(self):
         return 'GameKnot.com -- %s' % _('HTML parsing')
 
     def assign_game(self, url):
-        # Verify the URL
+        # Verify the host
         parsed = urlparse(url)
         if parsed.netloc.lower() not in ['www.gameknot.com', 'gameknot.com']:
             return False
-        if 'chess.pl' not in parsed.path.lower() and 'analyze-board.pl' not in parsed.path.lower():
+
+        # Verify the page
+        ppl = parsed.path.lower()
+        if 'chess.pl' in ppl or 'analyze-board.pl' in ppl:
+            self.url_type = TYPE_GAME
+        elif 'chess-puzzle.pl' in ppl:
+            self.url_type = TYPE_PUZZLE
+        else:
             return False
 
-        # Read the arguments
-        args = parse_qs(parsed.query)
-        if 'bd' in args:
-            gid = args['bd'][0]
-            if gid.isdigit() and gid != '0':
-                self.id = gid
-                return True
-        return False
+        # Accept any incoming link because the puzzle ID is a combination of several parameters
+        self.id = url
+        return True
 
     def download_game(self):
         # Check
-        if self.id is None:
+        if self.url_type not in [TYPE_PUZZLE, TYPE_GAME] or self.id is None:
             return None
 
         # Download
-        url = 'https://gameknot.com/analyze-board.pl?bd=%s' % self.id
-        page = self.download(url, userAgent=True)
+        page = self.download(self.id, userAgent=True)
         if page is None:
             return None
 
-        # Header
-        game = {}
-        structure = [('anbd_movelist', 's', '_moves'),
-                     ('anbd_result', 'i', 'Result'),
-                     ('anbd_player_w', 's', 'White'),
-                     ('anbd_player_b', 's', 'Black'),
-                     ('anbd_rating_w', 'i', 'WhiteElo'),
-                     ('anbd_rating_b', 'i', 'BlackElo'),
-                     ('anbd_title', 's', 'Event'),
-                     ('anbd_timestamp', 's', 'Date'),
-                     ('export_web_input_result_text', 's', '_reason')]
-        for var, type, tag in structure:
-            game[tag] = ''
-        game['_url'] = url
-        lines = page.split(';')
-        for line in lines:
+        # Library
+        def extract_variables(page, structure):
+            game = {}
             for var, type, tag in structure:
-                if var not in line.lower():
-                    continue
-                if type == 's':
-                    pos1 = line.find("'")
-                    pos2 = line.find("'", pos1 + 1)
-                    if pos2 > pos1:
-                        game[tag] = line[pos1 + 1:pos2]
-                elif type == 'i':
-                    pos1 = line.find("=")
-                    if pos1 != -1:
-                        txt = line[pos1 + 1:].strip()
-                        if txt not in ['', '0']:
-                            game[tag] = txt
-                else:
-                    assert(False)
-                    return None
-        if game['Result'] == '1':
-            game['Result'] = '1-0'
-        elif game['Result'] == '2':
-            game['Result'] = '1/2-1/2'
-        elif game['Result'] == '3':
-            game['Result'] = '0-1'
-        else:
-            game['Result'] = '*'
+                game[tag] = ''
+            lines = page.split(';')
+            for line in lines:
+                for var, type, tag in structure:
+                    pos1 = line.find(var)
+                    if pos1 == -1:
+                        continue
+                    if type == 's':
+                        pos1 = line.find("'", pos1 + 1)
+                        pos2 = line.find("'", pos1 + 1)
+                        if pos2 > pos1:
+                            game[tag] = line[pos1 + 1:pos2]
+                    elif type == 'i':
+                        pos1 = line.find('=', pos1 + 1)
+                        if pos1 != -1:
+                            txt = line[pos1 + 1:].strip()
+                            if txt not in ['', '0']:
+                                game[tag] = txt
+                    else:
+                        assert(False)
+                        return None
+            return game
 
-        # Body
-        board = LBoard()
-        board.applyFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
-        moves = game['_moves'].split('-')
-        game['_moves'] = ''
-        for move in moves:
-            if move == '':
-                break
-            try:
-                if self.use_an:
-                    kmove = parseAny(board, move)
-                    game['_moves'] += toSAN(board, kmove) + ' '
-                    board.applyMove(kmove)
-                else:
-                    game['_moves'] += move + ' '
-            except Exception:
-                return None
+        # Logic for the puzzles
+        if self.url_type == TYPE_PUZZLE:
+            structure = [('puzzle_id', 'i', '_id'),
+                         ('puzzle_fen', 's', 'FEN'),
+                         ('load_solution(', 's', '_solution')]
+            game = extract_variables(page, structure)
+            game['_url'] = 'https://gameknot.com/chess-puzzle.pl?pz=%s' % game['_id']
+            game['White'] = _('White')
+            game['Black'] = _('Black')
+            game['Result'] = '*'
+            if game['FEN'] != '':
+                game['SetUp'] = '1'
+            if game['_solution'] != '':
+                list = game['_solution'].split('|')
+                game['_moves'] = ' {Solution:'
+                nextid = '0'
+                for item in list:
+                    item = item.split(',')
+                    # 0 = identifier of the move
+                    # 1 = player
+                    # 2 = identifier of the previous move
+                    # 3 = count of following moves
+                    # 4 = algebraic notation of the move
+                    # 5 = UCI notation of the move
+                    # 6 = ?
+                    # 7 = identifier of the next move
+                    # > = additional moves for the current line
+                    curid = item[0]
+                    if curid != nextid:
+                        continue
+                    if len(item) == 4:
+                        break
+                    nextid = item[7]
+                    if self.use_an:
+                        move = item[4]
+                    else:
+                        move = item[5]
+                    game['_moves'] += ' %s' % move
+                game['_moves'] += '}'
+
+        # Logic for the games
+        elif self.url_type == TYPE_GAME:
+            # Header
+            structure = [('anbd_movelist', 's', '_moves'),
+                         ('anbd_result', 'i', 'Result'),
+                         ('anbd_player_w', 's', 'White'),
+                         ('anbd_player_b', 's', 'Black'),
+                         ('anbd_rating_w', 'i', 'WhiteElo'),
+                         ('anbd_rating_b', 'i', 'BlackElo'),
+                         ('anbd_title', 's', 'Event'),
+                         ('anbd_timestamp', 's', 'Date'),
+                         ('export_web_input_result_text', 's', '_reason')]
+            game = extract_variables(page, structure)
+            if game['Result'] == '1':
+                game['Result'] = '1-0'
+            elif game['Result'] == '2':
+                game['Result'] = '1/2-1/2'
+            elif game['Result'] == '3':
+                game['Result'] = '0-1'
+            else:
+                game['Result'] = '*'
+
+            # Body
+            board = LBoard()
+            board.applyFen(DEFAULT_BOARD)
+            moves = game['_moves'].split('-')
+            game['_moves'] = ''
+            for move in moves:
+                if move == '':
+                    break
+                try:
+                    if self.use_an:
+                        kmove = parseAny(board, move)
+                        game['_moves'] += toSAN(board, kmove) + ' '
+                        board.applyMove(kmove)
+                    else:
+                        game['_moves'] += move + ' '
+                except Exception:
+                    return None
 
         # Rebuild the PGN game
-        return self.rebuild_pgn(game)
+        return unquote(self.rebuild_pgn(game))
 
 
 # Chess.com
@@ -1222,7 +1275,7 @@ class InternetGameChessCom(InternetGameInterface):
             if 'FEN' in game:
                 board.applyFen(game['FEN'])
             else:
-                board.applyFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+                board.applyFen(DEFAULT_BOARD)
             while len(moves) > 0:
                 def decode(move):
                     magic = 'aa1ia2qa3ya4Ga5Oa6Wa74a8bb1jb2rb3zb4Hb5Pb6Xb75b8cc1kc2sc3Ac4Ic5Qc6Yc76c8dd1ld2td3Bd4Jd5Rd6Zd77d8ee1me2ue3Ce4Ke5Se60e78e8ff1nf2vf3Df4Lf5Tf61f79f8gg1og2wg3Eg4Mg5Ug62g7!g8hh1ph2xh3Fh4Nh5Vh63h7?h8'

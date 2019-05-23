@@ -109,7 +109,11 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('https://GAMEKNOT.com/dummy.pl?bd=22792465', False),                  # Not a game (wrong path)
                  ('https://gameknot.com/chess.pl?bd=bepofr&p=1', False),                # Not a game (not numeric)
                  ('https://gameknot.com/analyze-board.pl?bd=1234567890&p=1', False),    # Not a game (wrong ID)
-                 ('https://gameknot.com', False)]                                       # Not a game (homepage)
+                 ('https://gameknot.com', False),                                       # Not a game (homepage)
+                 ('https://gameknot.com/chess-puzzle.pl?pz=224260', True),              # Puzzle with ID
+                 ('https://gameknot.com/chess-puzzle.pl?pz=224541&next=2', True),       # Puzzle without direct ID
+                 ('https://gameknot.com/chess-puzzle.pl?pz=224571', True),              # Puzzle with analysis
+                 ('https://gameknot.com/chess-puzzle.pl?pz=ABC', True)]                 # Random puzzle from wrong ID
         self.executeTest(InternetGameGameknot(), links)
 
     def testChessCom(self):
