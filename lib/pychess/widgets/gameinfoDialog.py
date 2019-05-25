@@ -43,10 +43,13 @@ def run(widgets):
 
     # Load of the tags in the editor
     tags_store.clear()
+    tlist = []
     for tag in gamemodel.tags:
-        # print(tag, gamemodel.tags[tag])
         if tag not in dedicated_tags and isinstance(gamemodel.tags[tag], str) and gamemodel.tags[tag]:
-            tags_store.append([tag, gamemodel.tags[tag]])
+            tlist.append(tag)
+    tlist.sort()
+    for tag in tlist:
+        tags_store.append([tag, gamemodel.tags[tag]])
 
     # Show the loaded dialog
     widgets["game_info"].show()
