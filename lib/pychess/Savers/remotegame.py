@@ -238,19 +238,20 @@ class InternetGameLichess(InternetGameInterface):
             return pgn
 
         # Replace the tags
-        reps = [('Variant', 'UltraBullet', 'Normal'),
-                ('Variant', 'Bullet', 'Normal'),
-                ('Variant', 'Blitz', 'Normal'),
-                ('Variant', 'Rapid', 'Normal'),
-                ('Variant', 'Classical', 'Normal'),
-                ('Variant', 'Correspondence', 'Normal'),
-                ('Variant', 'Standard', 'Normal'),
+        reps = [('Variant', 'UltraBullet', ''),
+                ('Variant', 'Bullet', ''),
+                ('Variant', 'Blitz', ''),
+                ('Variant', 'Rapid', ''),
+                ('Variant', 'Classical', ''),
+                ('Variant', 'Correspondence', ''),
+                ('Variant', 'Standard', ''),
                 ('Variant', 'Chess960', CHESS960),
                 ('Variant', 'ThreeCheck', '3check'),
                 ('Variant', 'Antichess', 'Suicide')]  # TODO Use shared constants
         for rep in reps:
             tag, s, d = rep
             pgn = pgn.replace('[%s "%s"]' % (tag, s), '[%s "%s"]' % (tag, d))
+        pgn = pgn.replace('[Variant ""]\n', '')
         return pgn
 
     def download_game(self):
@@ -1358,6 +1359,111 @@ class InternetGameSchachspielen(InternetGameInterface):
         return pgn
 
 
+# RedHotPawn.com
+class InternetGameRedhotpawn(InternetGameInterface):
+    def __init__(self):
+        InternetGameInterface.__init__(self)
+        self.url_type = None
+
+    def get_description(self):
+        return 'RedHotPawn.com -- %s' % _('HTML parsing')
+
+    def assign_game(self, url):
+        # Verify the URL
+        parsed = urlparse(url)
+        if parsed.netloc.lower() not in ['www.redhotpawn.com', 'redhotpawn.com']:
+            return False
+
+        # Verify the path
+        ppl = parsed.path.lower()
+        if 'chess-game-' in ppl:
+            ttype = TYPE_GAME
+            key = 'gameid'
+        elif 'chess-puzzle-' in ppl:
+            ttype = TYPE_PUZZLE
+            if 'chess-puzzle-serve' in url.lower():
+                self.url_type = ttype
+                self.id = url
+                return True
+            else:
+                key = 'puzzleid'
+        else:
+            return False
+
+        # Read the arguments
+        args = parse_qs(parsed.query)
+        if key in args:
+            gid = args[key][0]
+            if gid.isdigit() and gid != '0':
+                self.url_type = ttype
+                self.id = gid
+                return True
+        return False
+
+    def download_game(self):
+        # Download
+        if self.id is None:
+            return None
+        if self.url_type == TYPE_GAME:
+            url = 'https://www.redhotpawn.com/pagelet/view/game-pgn.php?gameid=%s' % self.id
+        elif self.url_type == TYPE_PUZZLE:
+            if '://' in self.id:
+                url = self.id
+                event = _('Puzzle')
+            else:
+                url = 'https://www.redhotpawn.com/chess-puzzles/chess-puzzle-solve.php?puzzleid=%s' % self.id
+                event = _('Puzzle %s') % self.id
+        else:
+            return None
+        page = self.download(url)
+        if page is None:
+            return None
+
+        # Logic for the games
+        if self.url_type == TYPE_GAME:
+            # Parser
+            class redhotpawnparser(HTMLParser):
+                def __init__(self):
+                    HTMLParser.__init__(self)
+                    self.tag_ok = False
+                    self.pgn = None
+
+                def handle_starttag(self, tag, attrs):
+                    if tag.lower() == 'textarea':
+                        self.tag_ok = True
+
+                def handle_data(self, data):
+                    if self.pgn is None and self.tag_ok:
+                        self.pgn = data
+
+            # Extractor
+            parser = redhotpawnparser()
+            parser.feed(page)
+            return parser.pgn.strip()
+
+        # Logic for the puzzles
+        elif self.url_type == TYPE_PUZZLE:
+            pos1 = page.find('var g_startFenStr')
+            if pos1 != -1:
+                pos1 = page.find("'", pos1)
+                pos2 = page.find("'", pos1 + 1)
+                if pos2 > pos1:
+                    game = {}
+                    game['_url'] = url
+                    game['FEN'] = page[pos1 + 1:pos2]
+                    game['SetUp'] = '1'
+                    game['Event'] = event
+                    game['White'] = _('White')
+                    game['Black'] = _('Black')
+                    pos1 = page.find('<h4>')
+                    pos2 = page.find('</h4>', pos1)
+                    if pos1 != -1 and pos2 > pos1:
+                        game['_moves'] = '{%s}' % page[pos1 + 4:pos2]
+                    return self.rebuild_pgn(game)
+
+        return None
+
+
 # Generic
 class InternetGameGeneric(InternetGameInterface):
     def get_description(self):
@@ -1436,6 +1542,7 @@ chess_providers = [InternetGameLichess(),
                    InternetGameGameknot(),
                    InternetGameChessCom(),
                    InternetGameSchachspielen(),
+                   InternetGameRedhotpawn(),
                    InternetGameGeneric()]
 
 

@@ -1,7 +1,7 @@
 import unittest
 import random
 
-from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameGeneric, get_internet_game_as_pgn
+from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameGeneric, get_internet_game_as_pgn
 
 
 class RemoteGameTestCase(unittest.TestCase):
@@ -135,6 +135,20 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('https://www.schach-spielen.eu/about/8kcevvdy', False),               # Not a game (bad URL)
                  ('https://www.schach-SPIELEN.eu', False)]                              # Not a game (homepage)
         self.executeTest(InternetGameSchachspielen(), links)
+
+    def testRedhotpawn(self):
+        links = [('https://www.redhotpawn.com/chess/chess-game-history.php?gameid=13264954', True),                 # Game in progress (at the time of the initial test)
+                 ('https://www.redhotpawn.com/chess/chess-game-HISTORY.php?gameid=13261506&arg=0#anchor', True),    # Game draw
+                 ('https://www.redhotpawn.com/chess/chess-game-history.php?gameid=13238354', True),                 # Game stalemate
+                 ('https://REDHOTPAWN.com/chess/chess-GAME-analysis.php?gameid=13261541&arg=0#anchor', True),       # Game mate
+                 ('https://www.redhotpawn.com/chess/chess-game-history.php?gameid=1234567890', False),              # Not a game (wrong ID)
+                 ('https://www.redhotpawn.com/chess/view-game.php?gameid=13238354', False),                         # Not a game (wrong path in URL)
+                 ('https://www.redhotpawn.com/chess/chess-game-analysis.php?id=13238354', False),                   # Not a game (wrong parameter in URL)
+                 ('https://www.redhotpawn.com', False),                                                             # Not a game (homepage)
+                 ('https://www.redhotpawn.com/chess-puzzles/chess-puzzle-solve.php?puzzleid=7470', True),           # Puzzle
+                 ('https://www.redhotpawn.com/chess-puzzles/chess-puzzle-serve.php', True),                         # Puzzle through a random link
+                 ('https://www.redhotpawn.com/chess-puzzles/chess-puzzle-solve.php?puzzleid=1234567890', True)]     # Not a puzzle (wrong ID)
+        self.executeTest(InternetGameRedhotpawn(), links)
 
     def testGeneric(self):
         links = [('https://thechessworld.com/pgngames/middlegames/sacrifice-on-e6/Ivanchuk-Karjakin.pgn', True)]    # Game with UTF-8 BOM
