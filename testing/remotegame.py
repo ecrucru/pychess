@@ -1,7 +1,7 @@
 import unittest
 import random
 
-from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameGeneric, get_internet_game_as_pgn
+from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGameGeneric, get_internet_game_as_pgn
 
 
 class RemoteGameTestCase(unittest.TestCase):
@@ -149,6 +149,13 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('https://www.redhotpawn.com/chess-puzzles/chess-puzzle-serve.php', True),                         # Puzzle through a random link
                  ('https://www.redhotpawn.com/chess-puzzles/chess-puzzle-solve.php?puzzleid=1234567890', True)]     # Not a puzzle (wrong ID)
         self.executeTest(InternetGameRedhotpawn(), links)
+
+    def testChesssamara(self):
+        links = [('https://chess-SAMARA.ru/68373335-igra-Firudin1888-vs-Pizyk', True),      # Game
+                 ('https://chess-samara.ru/view/pgn.html?gameid=68373335', False),          # Game but handled by the generic extractor
+                 ('https://chess-samara.ru/1234567890123-pychess-vs-pychess', False),       # Not a game (wrong ID)
+                 ('https://chess-samara.ru', False)]                                        # Not a game (homepage)
+        self.executeTest(InternetGameChesssamara(), links)
 
     def testGeneric(self):
         links = [('https://thechessworld.com/pgngames/middlegames/sacrifice-on-e6/Ivanchuk-Karjakin.pgn', True)]    # Game with UTF-8 BOM

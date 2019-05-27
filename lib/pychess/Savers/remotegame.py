@@ -1464,6 +1464,34 @@ class InternetGameRedhotpawn(InternetGameInterface):
         return None
 
 
+# Chess-Samara.ru
+class InternetGameChesssamara(InternetGameInterface):
+    def get_description(self):
+        return 'Chess-Samara.ru -- %s' % _('Download link')
+
+    def assign_game(self, url):
+        rxp = re.compile('^https?:\/\/(\S+\.)?chess-samara\.ru\/(\d+)\-', re.IGNORECASE)
+        m = rxp.match(url)
+        if m is not None:
+            gid = str(m.group(2))
+            if gid.isdigit() and gid != '0':
+                self.id = gid
+                return True
+        return False
+
+    def download_game(self):
+        # Check
+        if self.id is None:
+            return None
+
+        # Download
+        pgn = self.download('https://chess-samara.ru/view/pgn.html?gameid=%s' % self.id)
+        if pgn is None or len(pgn) == 0:
+            return None
+        else:
+            return pgn
+
+
 # Generic
 class InternetGameGeneric(InternetGameInterface):
     def get_description(self):
@@ -1488,7 +1516,7 @@ class InternetGameGeneric(InternetGameInterface):
             return None
 
         # Chess file
-        if mime == 'application/x-chess-pgn':
+        if mime in ['application/x-chess-pgn', 'application/pgn']:
             return data
 
         # Web-page
@@ -1543,6 +1571,7 @@ chess_providers = [InternetGameLichess(),
                    InternetGameChessCom(),
                    InternetGameSchachspielen(),
                    InternetGameRedhotpawn(),
+                   InternetGameChesssamara(),
                    InternetGameGeneric()]
 
 
