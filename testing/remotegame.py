@@ -1,7 +1,7 @@
 import unittest
 import random
 
-from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGameGeneric, get_internet_game_as_pgn
+from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameGeneric, get_internet_game_as_pgn
 
 
 class RemoteGameTestCase(unittest.TestCase):
@@ -156,6 +156,12 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('https://chess-samara.ru/1234567890123-pychess-vs-pychess', False),       # Not a game (wrong ID)
                  ('https://chess-samara.ru', False)]                                        # Not a game (homepage)
         self.executeTest(InternetGameChesssamara(), links)
+
+    def test2700chess(self):
+        links = [('https://2700CHESS.com/games/dominguez-perez-yu-yangyi-r19.6-hengshui-chn-2019-05-18', True),                     # Game
+                 ('https://2700chess.com/games/download?slug=dominguez-perez-yu-yangyi-r19.6-hengshui-chn-2019-05-18#tag', True),   # Game with direct link
+                 ('https://2700chess.com', False)]                                                                                  # Not a game (homepage)
+        self.executeTest(InternetGame2700chess(), links)
 
     def testGeneric(self):
         links = [('https://thechessworld.com/pgngames/middlegames/sacrifice-on-e6/Ivanchuk-Karjakin.pgn', True)]    # Game with UTF-8 BOM
