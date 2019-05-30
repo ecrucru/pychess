@@ -3,6 +3,7 @@ import re
 import json
 from urllib.request import Request, urlopen
 from urllib.parse import urlparse, parse_qs, unquote
+from html import unescape
 from html.parser import HTMLParser
 import asyncio
 import websockets
@@ -26,6 +27,7 @@ from pychess.System.useragent import generate_user_agent
 TYPE_NONE, TYPE_GAME, TYPE_STUDY, TYPE_PUZZLE, TYPE_EVENT = range(5)
 CHESS960 = 'Fischerandom'
 DEFAULT_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+DEFAULT_AN = True  # To rebuild a readable PGN
 
 CAT_DL = _('Download link')
 CAT_HTML = _('HTML parsing')
@@ -508,7 +510,7 @@ class InternetGameChesstempo(InternetGameInterface):
 class InternetGameChess24(InternetGameInterface):
     def __init__(self):
         InternetGameInterface.__init__(self)
-        self.use_an = True  # True to rebuild a readable PGN
+        self.use_an = DEFAULT_AN
 
     def get_description(self):
         return 'Chess24.com -- %s' % CAT_HTML
@@ -843,7 +845,7 @@ class InternetGameThechessworld(InternetGameInterface):
 class InternetGameChessOrg(InternetGameInterface):
     def __init__(self):
         InternetGameInterface.__init__(self)
-        self.use_an = True  # True to rebuild a readable PGN
+        self.use_an = DEFAULT_AN
 
     def get_description(self):
         return 'Chess.org -- %s' % CAT_WS
@@ -1037,7 +1039,7 @@ class InternetGameGameknot(InternetGameInterface):
     def __init__(self):
         InternetGameInterface.__init__(self)
         self.url_type = TYPE_NONE
-        self.use_an = True  # True to rebuild a readable PGN
+        self.use_an = DEFAULT_AN
 
     def get_description(self):
         return 'GameKnot.com -- %s' % CAT_HTML
@@ -1187,7 +1189,7 @@ class InternetGameChessCom(InternetGameInterface):
     def __init__(self):
         InternetGameInterface.__init__(self)
         self.url_type = None
-        self.use_an = True  # True to rebuild a readable PGN
+        self.use_an = DEFAULT_AN
 
     def get_description(self):
         return 'Chess.com -- %s' % CAT_HTML
@@ -1596,6 +1598,95 @@ class InternetGameIccf(InternetGameInterface):
             return pgn
 
 
+# SchachArena.de
+class InternetGameSchacharena(InternetGameInterface):
+    def __init__(self):
+        InternetGameInterface.__init__(self)
+        self.use_an = DEFAULT_AN
+
+    def get_description(self):
+        return 'SchachArena.de -- %s' % CAT_HTML
+
+    def assign_game(self, url):
+        # Verify the URL
+        parsed = urlparse(url)
+        if parsed.netloc.lower() not in ['www.schacharena.de', 'schacharena.de'] or 'verlauf' not in parsed.path.lower():
+            return False
+
+        # Read the arguments
+        args = parse_qs(parsed.query)
+        if 'brett' in args:
+            gid = args['brett'][0]
+            if gid.isdigit() and gid != '0':
+                self.id = gid
+                return True
+        return False
+
+    def download_game(self):
+        # Check
+        if self.id is None:
+            return None
+
+        # Download page
+        page = self.download('https://www.schacharena.de/new/verlauf.php?brett=%s' % self.id)
+        if page is None:
+            return None
+
+        # Init
+        rxp_player = re.compile('.*spielerstatistik.*name=(\w+).*\[([0-9]+)\].*', re.IGNORECASE)
+        rxp_move = re.compile('.*<span.*onMouseOut.*fan\(([0-9]+)\).*', re.IGNORECASE)
+        rxp_result = re.compile('.*>(1\-0|0\-1|1\/2\-1\/2)\s([^\<]+)<.*', re.IGNORECASE)
+        player_count = 0
+        board = LBoard()
+        board.applyFen(DEFAULT_BOARD)
+
+        # Parse
+        game = {}
+        game['Result'] = '*'
+        reason = ''
+        game['_moves'] = ''
+        game['_url'] = 'https://www.schacharena.de/new/verlauf_to_pgn_n.php?brett=%s' % self.id  # If one want to get the full PGN
+        lines = page.split("\n")
+        for line in lines:
+            # Player
+            m = rxp_player.match(line)
+            if m is not None:
+                player_count += 1
+                if player_count == 1:
+                    tag = 'White'
+                elif player_count == 2:
+                    tag = 'Black'
+                else:
+                    return None
+                game[tag] = m.group(1)
+                game[tag + 'Elo'] = m.group(2)
+                continue
+
+            # Move
+            m = rxp_move.match(line)
+            if m is not None:
+                move = m.group(1)
+                move = '_abcdefgh'[int(move[0])] + move[1] + '_abcdefgh'[int(move[2])] + move[3]
+                if self.use_an:
+                    kmove = parseAny(board, move)
+                    move = toSAN(board, kmove)
+                    board.applyMove(kmove)
+                game['_moves'] += '%s ' % move
+                continue
+
+            # Result
+            m = rxp_result.match(line)
+            if m is not None:
+                game['Result'] = m.group(1)
+                reason = unescape(m.group(2))
+                continue
+
+        # Final PGN
+        if reason != '':
+            game['_moves'] += ' {%s}' % reason
+        return self.rebuild_pgn(game)
+
+
 # Generic
 class InternetGameGeneric(InternetGameInterface):
     def get_description(self):
@@ -1678,6 +1769,7 @@ chess_providers = [InternetGameLichess(),
                    InternetGameChesssamara(),
                    InternetGame2700chess(),
                    InternetGameIccf(),
+                   InternetGameSchacharena(),
                    InternetGameGeneric()]
 
 
