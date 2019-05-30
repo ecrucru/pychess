@@ -1,7 +1,7 @@
 import unittest
 import random
 
-from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameSchacharena, InternetGameGeneric, get_internet_game_as_pgn
+from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameSchacharena, InternetGameChesspuzzle, InternetGameGeneric, get_internet_game_as_pgn
 
 
 class RemoteGameTestCase(unittest.TestCase):
@@ -43,10 +43,10 @@ class RemoteGameTestCase(unittest.TestCase):
         self.executeTest(InternetGameLichess(), links)
 
     def testChessgames(self):
-        links = [('http://www.chessgames.com/perl/chessgame?gid=1075462&comp=1', True),         # With computer analysis
-                 ('http://www.chessgames.com/perl/chessgame?gid=1075463', True),                # Without computer analysis
-                 ('http://www.CHESSGAMES.com/perl/chessgame?gid=1075463&comp=1#test', True),    # Without computer analysis but requested in URL
-                 ('http://www.chessgames.com/perl/chessgame?gid=1234567890', False)]            # Not a game
+        links = [('http://www.chessgames.com/perl/chessgame?gid=1075462&comp=1', True),             # With computer analysis
+                 ('http://www.chessgames.com/perl/chessgame?gid=1075463', True),                    # Without computer analysis
+                 ('http://www.CHESSGAMES.com/perl/chessgame?gid=1075463&comp=1#test', True),        # Without computer analysis but requested in URL
+                 ('http://www.chessgames.com/perl/chessgame?gid=1234567890', False)]                # Not a game
         self.executeTest(InternetGameChessgames(), links)
 
     def testFicsgames(self):
@@ -57,19 +57,19 @@ class RemoteGameTestCase(unittest.TestCase):
         self.executeTest(InternetGameFicsgames(), links)
 
     def testChesstempo(self):
-        links = [('https://chesstempo.com/gamedb/game/2046457', True),                  # Game
-                 ('https://chesstempo.com/gamedb/game/2046457/foo/bar/123', True),      # Game with additional path
-                 ('https://www.chesstempo.com/gamedb/game/2046457?p=0#tag', True),      # Game with additional parameters
-                 ('http://chesstempo.com/faq.html', False)]                             # Not a game
+        links = [('https://chesstempo.com/gamedb/game/2046457', True),                      # Game
+                 ('https://chesstempo.com/gamedb/game/2046457/foo/bar/123', True),          # Game with additional path
+                 ('https://www.chesstempo.com/gamedb/game/2046457?p=0#tag', True),          # Game with additional parameters
+                 ('http://chesstempo.com/faq.html', False)]                                 # Not a game
         self.executeTest(InternetGameChesstempo(), links)
 
     def testChess24(self):
-        links = [('https://chess24.com/en/game/DQhOOrJaQKS31LOiOmrqPg#anchor', True)]   # Game with anchor
+        links = [('https://chess24.com/en/game/DQhOOrJaQKS31LOiOmrqPg#anchor', True)]       # Game with anchor
         self.executeTest(InternetGameChess24(), links)
 
     def test365chess(self):
-        links = [('https://www.365chess.com/view_game.php?g=4187437#anchor', True),     # Game 1/2-1/2 for special chars
-                 ('https://www.365chess.com/view_game.php?g=1234567890', False)]        # Not a game
+        links = [('https://www.365chess.com/view_game.php?g=4187437#anchor', True),         # Game 1/2-1/2 for special chars
+                 ('https://www.365chess.com/view_game.php?g=1234567890', False)]            # Not a game
         self.executeTest(InternetGame365chess(), links)
 
     def testChesspastebin(self):
@@ -104,16 +104,16 @@ class RemoteGameTestCase(unittest.TestCase):
         self.executeTest(InternetGameEuropeechecs(), links)
 
     def testGameknot(self):
-        links = [('https://gameknot.com/analyze-board.pl?bd=22792465#tag', True),       # Game
-                 ('https://GAMEKNOT.com/chess.pl?bd=22792465&p=1', True),               # Game
-                 ('https://GAMEKNOT.com/dummy.pl?bd=22792465', False),                  # Not a game (wrong path)
-                 ('https://gameknot.com/chess.pl?bd=bepofr&p=1', False),                # Not a game (not numeric)
-                 ('https://gameknot.com/analyze-board.pl?bd=1234567890&p=1', False),    # Not a game (wrong ID)
-                 ('https://gameknot.com', False),                                       # Not a game (homepage)
-                 ('https://gameknot.com/chess-puzzle.pl?pz=224260', True),              # Puzzle with ID
-                 ('https://gameknot.com/chess-puzzle.pl?pz=224541&next=2', True),       # Puzzle without direct ID
-                 ('https://gameknot.com/chess-puzzle.pl?pz=224571', True),              # Puzzle with analysis
-                 ('https://gameknot.com/chess-puzzle.pl?pz=ABC', True)]                 # Random puzzle from wrong ID
+        links = [('https://gameknot.com/analyze-board.pl?bd=22792465#tag', True),           # Game
+                 ('https://GAMEKNOT.com/chess.pl?bd=22792465&p=1', True),                   # Game
+                 ('https://GAMEKNOT.com/dummy.pl?bd=22792465', False),                      # Not a game (wrong path)
+                 ('https://gameknot.com/chess.pl?bd=bepofr&p=1', False),                    # Not a game (not numeric)
+                 ('https://gameknot.com/analyze-board.pl?bd=1234567890&p=1', False),        # Not a game (wrong ID)
+                 ('https://gameknot.com', False),                                           # Not a game (homepage)
+                 ('https://gameknot.com/chess-puzzle.pl?pz=224260', True),                  # Puzzle with ID
+                 ('https://gameknot.com/chess-puzzle.pl?pz=224541&next=2', True),           # Puzzle without direct ID
+                 ('https://gameknot.com/chess-puzzle.pl?pz=224571', True),                  # Puzzle with analysis
+                 ('https://gameknot.com/chess-puzzle.pl?pz=ABC', True)]                     # Random puzzle from wrong ID
         self.executeTest(InternetGameGameknot(), links)
 
     def testChessCom(self):
@@ -128,12 +128,12 @@ class RemoteGameTestCase(unittest.TestCase):
         self.executeTest(InternetGameChessCom(), links)
 
     def testSchachspielen(self):
-        links = [('https://www.schach-spielen.eu/analyse/2jcpl1vs/black#test', True),   # Best game ever with anchor
-                 ('http://schach-SPIELEN.eu/game/2jcpl1vs?p=1', True),                  # Best game ever with parameter
-                 ('https://www.schach-spielen.eu/game/8kcevvdy/white', True),           # Chess960
-                 ('https://www.schach-spielen.eu/game/IENSUIEN', False),                # Not a game (wrong ID)
-                 ('https://www.schach-spielen.eu/about/8kcevvdy', False),               # Not a game (bad URL)
-                 ('https://www.schach-SPIELEN.eu', False)]                              # Not a game (homepage)
+        links = [('https://www.schach-spielen.eu/analyse/2jcpl1vs/black#test', True),       # Best game ever with anchor
+                 ('http://schach-SPIELEN.eu/game/2jcpl1vs?p=1', True),                      # Best game ever with parameter
+                 ('https://www.schach-spielen.eu/game/8kcevvdy/white', True),               # Chess960
+                 ('https://www.schach-spielen.eu/game/IENSUIEN', False),                    # Not a game (wrong ID)
+                 ('https://www.schach-spielen.eu/about/8kcevvdy', False),                   # Not a game (bad URL)
+                 ('https://www.schach-SPIELEN.eu', False)]                                  # Not a game (homepage)
         self.executeTest(InternetGameSchachspielen(), links)
 
     def testRedhotpawn(self):
@@ -177,6 +177,14 @@ class RemoteGameTestCase(unittest.TestCase):
 
     def testSchacharena(self):
         self.executeTest(InternetGameSchacharena(), [])                         # No canonical name for the games
+
+    def testChesspuzzle(self):
+        links = [('https://chesspuzzle.net/Puzzle/23476', True),                # Puzzle from the quiz
+                 ('https://CHESSPUZZLE.net/Solution/32881', True),              # Puzzle from the solution
+                 ('https://chesspuzzle.net/Puzzle', False),                     # Not a puzzle (random link)
+                 ('https://chesspuzzle.net/Puzzle/123456789', False),           # Not a puzzle (wrong ID)
+                 ('https://chesspuzzle.net', False)]                            # Not a puzzle (homepage)
+        self.executeTest(InternetGameChesspuzzle(), links)
 
     def testGeneric(self):
         links = [('https://thechessworld.com/pgngames/middlegames/sacrifice-on-e6/Ivanchuk-Karjakin.pgn', True)]    # Game with UTF-8 BOM

@@ -831,8 +831,8 @@ class InternetGameThechessworld(InternetGameInterface):
 
             # Finds the games
             rxp = re.compile(".*pgn_uri:.*'([^']+)'.*", re.IGNORECASE)
-            list = data.split("\n")
-            for line in list:
+            lines = data.split("\n")
+            for line in lines:
                 m = rxp.match(line)
                 if m is not None:
                     links.append('https://www.thechessworld.com' + m.group(1))
@@ -1024,8 +1024,8 @@ class InternetGameEuropeechecs(InternetGameInterface):
 
             # Find the chess widgets
             rxp = re.compile(".*class=\"cbwidget\"\s+id=\"([0-9a-f]+)_container\".*", re.IGNORECASE)
-            list = page.split("\n")
-            for line in list:
+            lines = page.split("\n")
+            for line in lines:
                 m = rxp.match(line)
                 if m is not None:
                     links.append('https://www.europe-echecs.com/embed/doc_%s.pgn' % m.group(1))
@@ -1687,6 +1687,58 @@ class InternetGameSchacharena(InternetGameInterface):
         return self.rebuild_pgn(game)
 
 
+# ChessPuzzle.net
+class InternetGameChesspuzzle(InternetGameInterface):
+    def get_description(self):
+        return 'ChessPuzzle.net -- %s' % CAT_HTML
+
+    def assign_game(self, url):
+        rxp = re.compile('^https?:\/\/(\S+\.)?chesspuzzle\.net\/(Puzzle|Solution)\/([0-9]+)[\/\?\#]?', re.IGNORECASE)
+        m = rxp.match(url)
+        if m is not None:
+            gid = str(m.group(3))
+            if gid.isdigit() and gid != '0':
+                self.id = gid
+                return True
+        return False
+
+    def download_game(self):
+        # Check
+        if self.id is None:
+            return None
+
+        # Download the puzzle
+        page = self.download('https://chesspuzzle.net/Solution/%s' % self.id, userAgent=True)  # Else 403 Forbidden
+        if page is None:
+            return None
+
+        # Definition of the parser
+        class chesspuzzleparser(HTMLParser):
+            def __init__(self):
+                HTMLParser.__init__(self)
+                self.last_tag = None
+                self.pgn = None
+
+            def handle_starttag(self, tag, attrs):
+                self.last_tag = tag.lower()
+
+            def handle_data(self, data):
+                if self.pgn is None and self.last_tag == 'script':
+                    lines = data.split("\n")
+                    for line in lines:
+                        pos1 = line.find('pgn_text')
+                        if pos1 != -1:
+                            pos1 = line.find("'", pos1 + 1)
+                            pos2 = line.find("'", pos1 + 1)
+                            if pos1 != -1 and pos2 > pos1:
+                                self.pgn = line[pos1 + 1:pos2].replace(']  ', "]\n\n").replace('] ', "]\n").strip()
+                                break
+
+        # Get the puzzle
+        parser = chesspuzzleparser()
+        parser.feed(page)
+        return parser.pgn
+
 # Generic
 class InternetGameGeneric(InternetGameInterface):
     def get_description(self):
@@ -1770,6 +1822,7 @@ chess_providers = [InternetGameLichess(),
                    InternetGame2700chess(),
                    InternetGameIccf(),
                    InternetGameSchacharena(),
+                   InternetGameChesspuzzle(),
                    InternetGameGeneric()]
 
 
