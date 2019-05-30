@@ -20,10 +20,10 @@ from pychess.System.useragent import generate_user_agent
 # def _(p):
 #     return p
 # import ssl
-# ssl._create_default_https_context = ssl._create_unverified_context
+# ssl._create_default_https_context = ssl._create_unverified_context  # Chess24, ICCF
 
 
-TYPE_NONE, TYPE_GAME, TYPE_STUDY, TYPE_PUZZLE = range(4)
+TYPE_NONE, TYPE_GAME, TYPE_STUDY, TYPE_PUZZLE, TYPE_EVENT = range(5)
 CHESS960 = 'Fischerandom'
 DEFAULT_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
@@ -1545,6 +1545,57 @@ class InternetGame2700chess(InternetGameInterface):
         return None
 
 
+# Iccf.com
+class InternetGameIccf(InternetGameInterface):
+    def __init__(self):
+        InternetGameInterface.__init__(self)
+        self.url_type = None
+
+    def get_description(self):
+        return 'Iccf.com -- %s' % CAT_DL
+
+    def assign_game(self, url):
+        # Verify the hostname
+        parsed = urlparse(url)
+        if parsed.netloc.lower() not in ['www.iccf.com', 'iccf.com']:
+            return False
+
+        # Verify the path
+        ppl = parsed.path.lower()
+        if 'game' in ppl:
+            ttyp = TYPE_GAME
+        elif 'event' in ppl:
+            ttyp = TYPE_EVENT
+        else:
+            return False
+
+        # Read the arguments
+        args = parse_qs(parsed.query)
+        if 'id' in args:
+            gid = args['id'][0]
+            if gid.isdigit() and gid != '0':
+                self.url_type = ttyp
+                self.id = gid
+                return True
+        return False
+
+    def download_game(self):
+        # Check
+        if self.url_type not in [TYPE_GAME, TYPE_EVENT] or self.id is None:
+            return None
+
+        # Download
+        if self.url_type == TYPE_GAME:
+            url = 'https://www.iccf.com/GetPGN.aspx?id=%s'
+        elif self.url_type == TYPE_EVENT:
+            url = 'https://www.iccf.com/GetEventPGN.aspx?id=%s'
+        pgn = self.download(url % self.id)
+        if pgn in [None, ''] or 'does not exist.' in pgn or 'Invalid event' in pgn:
+            return None
+        else:
+            return pgn
+
+
 # Generic
 class InternetGameGeneric(InternetGameInterface):
     def get_description(self):
@@ -1626,6 +1677,7 @@ chess_providers = [InternetGameLichess(),
                    InternetGameRedhotpawn(),
                    InternetGameChesssamara(),
                    InternetGame2700chess(),
+                   InternetGameIccf(),
                    InternetGameGeneric()]
 
 

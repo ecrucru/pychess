@@ -1,7 +1,7 @@
 import unittest
 import random
 
-from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameGeneric, get_internet_game_as_pgn
+from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameGeneric, get_internet_game_as_pgn
 
 
 class RemoteGameTestCase(unittest.TestCase):
@@ -152,7 +152,7 @@ class RemoteGameTestCase(unittest.TestCase):
 
     def testChesssamara(self):
         links = [('https://chess-SAMARA.ru/68373335-igra-Firudin1888-vs-Pizyk', True),      # Game
-                 ('https://chess-samara.ru/view/pgn.html?gameid=68373335', False),          # Game but handled by the generic extractor
+                 ('https://chess-samara.ru/view/pgn.html?gameid=68373335', False),          # Game in direct link but handled by the generic extractor
                  ('https://chess-samara.ru/1234567890123-pychess-vs-pychess', False),       # Not a game (wrong ID)
                  ('https://chess-samara.ru', False)]                                        # Not a game (homepage)
         self.executeTest(InternetGameChesssamara(), links)
@@ -160,8 +160,20 @@ class RemoteGameTestCase(unittest.TestCase):
     def test2700chess(self):
         links = [('https://2700CHESS.com/games/dominguez-perez-yu-yangyi-r19.6-hengshui-chn-2019-05-18', True),                     # Game
                  ('https://2700chess.com/games/download?slug=dominguez-perez-yu-yangyi-r19.6-hengshui-chn-2019-05-18#tag', True),   # Game with direct link
+                 ('https://2700chess.COM/games/pychess-r1.1-paris-fra-2019-12-25', False),                                          # Not a game (wrong ID)
                  ('https://2700chess.com', False)]                                                                                  # Not a game (homepage)
         self.executeTest(InternetGame2700chess(), links)
+
+    def testIccf(self):
+        links = [('https://www.iccf.COM/game?id=154976&param=foobar', True),    # Game
+                 ('https://www.iccf.com/GetPGN.aspx?id=154976', False),         # Game in direct link but handled by the generic extractor
+                 ('https://www.iccf.com/game?id=abc123', False),                # Not a game (wrong ID)
+                 ('https://www.iccf.com/officials?id=154976', False),           # Not a game (invalid path)
+                 ('https://www.iccf.com', False),                               # Not a game (homepage)
+                 ('https://ICCF.com/event?id=13581#tag', True),                 # Event
+                 ('https://www.iccf.com/GetEventPGN.aspx?id=13581', False),     # Event in direct link but handled by the generic extractor
+                 ('https://www.iccf.com/event?id=abc123', False)]               # Not an event (wrong ID)
+        self.executeTest(InternetGameIccf(), links)
 
     def testGeneric(self):
         links = [('https://thechessworld.com/pgngames/middlegames/sacrifice-on-e6/Ivanchuk-Karjakin.pgn', True)]    # Game with UTF-8 BOM
