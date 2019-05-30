@@ -1739,8 +1739,49 @@ class InternetGameChesspuzzle(InternetGameInterface):
         parser.feed(page)
         return parser.pgn
 
+
+# ChessKing
+class InternetGameChessking(InternetGameInterface):
+    def __init__(self):
+        InternetGameInterface.__init__(self)
+        self.url_type = None
+
+    def get_description(self):
+        return 'ChessKing.com -- %s' % CAT_DL
+
+    def assign_game(self, url):
+        rxp = re.compile('^https?:\/\/(\S+\.)?chessking\.com\/games\/(ff\/)?([0-9]+)[\/\?\#]?', re.IGNORECASE)
+        m = rxp.match(url)
+        if m is not None:
+            gid = str(m.group(3))
+            if gid.isdigit() and gid != '0' and len(gid) <= 9:
+                if m.group(2) == 'ff/':
+                    self.url_type = 'f'
+                else:
+                    self.url_type = 'g'
+                self.id = gid
+                return True
+        return False
+
+    def download_game(self):
+        # Check
+        if None in [self.url_type, self.id]:
+            return None
+
+        # Download
+        id = self.id
+        while len(id) < 9:
+            id = '0%s' % id
+        url = 'https://c1.chessking.com/pgn/%s/%s/%s/%s%s.pgn' % (self.url_type, id[:3], id[3:6], self.url_type, id)
+        return self.download(url)
+
+
 # Generic
 class InternetGameGeneric(InternetGameInterface):
+    def __init__(self):
+        InternetGameInterface.__init__(self)
+        self.allow_octet_stream = False
+
     def get_description(self):
         return 'Generic -- %s' % CAT_MISC
 
@@ -1763,7 +1804,7 @@ class InternetGameGeneric(InternetGameInterface):
             return None
 
         # Chess file
-        if mime in ['application/x-chess-pgn', 'application/pgn']:
+        if (mime in ['application/x-chess-pgn', 'application/pgn']) or (self.allow_octet_stream and mime == 'application/octet-stream'):
             return data
 
         # Web-page
@@ -1823,6 +1864,7 @@ chess_providers = [InternetGameLichess(),
                    InternetGameIccf(),
                    InternetGameSchacharena(),
                    InternetGameChesspuzzle(),
+                   InternetGameChessking(),
                    InternetGameGeneric()]
 
 

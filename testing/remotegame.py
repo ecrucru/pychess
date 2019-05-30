@@ -1,7 +1,7 @@
 import unittest
 import random
 
-from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameSchacharena, InternetGameChesspuzzle, InternetGameGeneric, get_internet_game_as_pgn
+from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameSchacharena, InternetGameChesspuzzle, InternetGameChessking, InternetGameGeneric, get_internet_game_as_pgn
 
 
 class RemoteGameTestCase(unittest.TestCase):
@@ -185,6 +185,14 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('https://chesspuzzle.net/Puzzle/123456789', False),           # Not a puzzle (wrong ID)
                  ('https://chesspuzzle.net', False)]                            # Not a puzzle (homepage)
         self.executeTest(InternetGameChesspuzzle(), links)
+
+    def testChessking(self):
+        # The direct PGN links are returned as 'application/octet-stream'
+        links = [('https://play.chessking.COM/games/4318271', True),            # Game of type G
+                 ('https://CHESSKING.com/games/ff/9859108', True),              # Game of type F
+                 ('https://play.chessking.com/games/1234567890', False),        # Not a game (ID too long)
+                 ('https://play.chessking.com', False)]                         # Not a game (homepage)
+        self.executeTest(InternetGameChessking(), links)
 
     def testGeneric(self):
         links = [('https://thechessworld.com/pgngames/middlegames/sacrifice-on-e6/Ivanchuk-Karjakin.pgn', True)]    # Game with UTF-8 BOM
