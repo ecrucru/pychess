@@ -748,7 +748,7 @@ def listEnginesFromPath(defaultPath, maxDepth=3, withSymLink=False):
 
             # Blacklisted keywords
             blacklisted = False
-            for kw in ["install", "setup", "reset", "remove", "delete", "purge", "config", "register", "editor", "book"]:
+            for kw in ["install", "setup", "reset", "remove", "delete", "clean", "purge", "config", "register", "editor", "book"]:
                 if kw in file_ci:
                     blacklisted = True
                     break
