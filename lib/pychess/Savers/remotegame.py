@@ -2,12 +2,12 @@ import os
 import re
 import json
 from urllib.request import Request, urlopen
-from urllib.parse import urlparse, parse_qs, unquote
+from urllib.parse import urlparse, parse_qs, unquote, urlencode
 from html import unescape
 from html.parser import HTMLParser
 import asyncio
 import websockets
-import base64
+from base64 import b64decode
 import string
 from random import choice, randint
 
@@ -32,6 +32,7 @@ DEFAULT_AN = True  # To rebuild a readable PGN
 
 CAT_DL = _('Download link')
 CAT_HTML = _('HTML parsing')
+CAT_API = _('Application programming interface')
 CAT_MISC = _('Various techniques')
 CAT_WS = _('Websockets')
 
@@ -172,6 +173,27 @@ class InternetGameInterface:
         loop.close()
         asyncio.set_event_loop(curloop)
         return result
+
+    def send_xhr(self, url, postData, userAgent=False):
+        ''' Call a target URL by submitting the POSTDATA.
+            The USERAGENT is requested by some websites to make sure that you are not a bot.
+            The value None is returned in case of error. '''
+        # Check
+        if url in [None, ''] or postData in [None, '']:
+            return None
+
+        # Call data
+        try:
+            log.debug('Calling API: %s' % url)
+            if userAgent:
+                req = Request(url, urlencode(postData).encode(), headers={'User-Agent': self.userAgent})
+            else:
+                req = Request(url, urlencode(postData).encode())
+            response = urlopen(req)
+            return self.read_data(response)
+        except Exception as exception:
+            log.debug('Exception raised: %s' % repr(exception))
+            return None
 
     def rebuild_pgn(self, game):
         ''' Return an object in PGN format.
@@ -424,7 +446,6 @@ class InternetGameLichess(InternetGameInterface):
 
         else:
             assert(False)
-            return None  # Never reached
 
 
 # ChessGames.com
@@ -793,7 +814,7 @@ class InternetGameChessbomb(InternetGameInterface):
                     pos2 = data.find('"', pos1 + 1)
                     if -1 not in [pos1, pos2]:
                         try:
-                            bourne = base64.b64decode(data[pos1 + 1:pos2]).decode().strip()
+                            bourne = b64decode(data[pos1 + 1:pos2]).decode().strip()
                             self.json = json.loads(bourne)
                         except Exception:
                             self.json = None
@@ -1127,7 +1148,6 @@ class InternetGameGameknot(InternetGameInterface):
                                 game[tag] = txt
                     else:
                         assert(False)
-                        return None
             return game
 
         # Logic for the puzzles
@@ -1344,7 +1364,6 @@ class InternetGameChessCom(InternetGameInterface):
 
         else:
             assert(False)
-            return None  # Never reached
 
 
 # Schach-Spielen.eu
@@ -1770,7 +1789,7 @@ class InternetGameChesspuzzle(InternetGameInterface):
         return parser.pgn
 
 
-# ChessKing
+# ChessKing.com
 class InternetGameChessking(InternetGameInterface):
     def __init__(self):
         InternetGameInterface.__init__(self)
@@ -1804,6 +1823,77 @@ class InternetGameChessking(InternetGameInterface):
             id = '0%s' % id
         url = 'https://c1.chessking.com/pgn/%s/%s/%s/%s%s.pgn' % (self.url_type, id[:3], id[3:6], self.url_type, id)
         return self.download(url)
+
+
+# IdeaChess.com
+class InternetGameIdeachess(InternetGameInterface):
+    def __init__(self):
+        InternetGameInterface.__init__(self)
+        self.url_type = None
+
+    def get_description(self):
+        return 'IdeaChess.com -- %s' % CAT_API
+
+    def assign_game(self, url):
+        # Game ID
+        rxp = re.compile('^https?:\/\/(\S+\.)?ideachess\.com\/.*\/.*\/([0-9]+)[\/\?\#]?', re.IGNORECASE)
+        m = rxp.match(url)
+        if m is not None:
+            gid = str(m.group(2))
+            if gid.isdigit() and gid != '0':
+                # Game type
+                classification = [('/chess_tactics_puzzles/checkmate_n/', 'm'),
+                                  ('/echecs_tactiques/mat_n/', 'm'),
+                                  ('/scacchi_tattica/scacco_matto_n/', 'm'),
+                                  ('/chess_tactics_puzzles/tactics_n/', 't'),
+                                  ('/echecs_tactiques/tactiques_n/', 't'),
+                                  ('/scacchi_tattica/tattica_n/', 't')]
+                for path, ttyp in classification:
+                    if path in url.lower():
+                        self.url_type = ttyp
+                        self.id = gid
+                        return True
+        return False
+
+    def download_game(self):
+        # Check
+        if self.url_type is None or self.id is None:
+            return None
+
+        # Fetch the puzzle
+        api = 'http://www.ideachess.com/com/ajax2'
+        data = {'message': '{"action":100,"data":{"problemNumber":%s,"kind":"%s"}}' % (self.id, self.url_type)}
+        bourne = self.send_xhr(api, data, userAgent=True)
+        chessgame = self.json_loads(bourne)
+        if self.json_field(chessgame, 'action') != 200:
+            return None
+
+        # Build the PGN
+        game = {}
+        if self.url_type == 'm':
+            game['_url'] = 'http://www.ideachess.com/chess_tactics_puzzles/checkmate_n/%s' % self.id
+        elif self.url_type == 't':
+            game['_url'] = 'http://www.ideachess.com/chess_tactics_puzzles/tactics_n/%s' % self.id
+        else:
+            assert(False)
+        game['FEN'] = b64decode(self.json_field(chessgame, 'data/FEN')).decode().strip()
+        game['SetUp'] = '1'
+        game['_moves'] = self.json_field(chessgame, 'data/PGN')
+        v = self.json_field(chessgame, 'data/requiredMoves')
+        if v > 0:
+            game['Site'] = _('%d moves to find') % v
+        list = self.json_field(chessgame, 'data/extraInfo').split('|')
+        if len(list) == 4:
+            game['Event'] = list[0][list[0].find(' ') + 1:].strip()
+            game['Date'] = list[1].strip()
+            l2 = list[2].split(' - ')
+            if len(l2) == 2:
+                game['White'] = l2[0].strip()
+                game['Black'] = l2[1].strip()
+            game['Result'] = list[3].strip()
+        else:
+            game['Result'] = '*'
+        return self.rebuild_pgn(game)
 
 
 # Generic
@@ -1895,6 +1985,7 @@ chess_providers = [InternetGameLichess(),
                    InternetGameSchacharena(),
                    InternetGameChesspuzzle(),
                    InternetGameChessking(),
+                   InternetGameIdeachess(),
                    InternetGameGeneric()]
 
 

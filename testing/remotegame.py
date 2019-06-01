@@ -1,7 +1,7 @@
 import unittest
 import random
 
-from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameSchacharena, InternetGameChesspuzzle, InternetGameChessking, InternetGameGeneric, get_internet_game_as_pgn
+from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameSchacharena, InternetGameChesspuzzle, InternetGameChessking, InternetGameIdeachess, InternetGameGeneric, get_internet_game_as_pgn
 
 
 class RemoteGameTestCase(unittest.TestCase):
@@ -193,6 +193,26 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('https://play.chessking.com/games/1234567890', False),        # Not a game (ID too long)
                  ('https://play.chessking.com', False)]                         # Not a game (homepage)
         self.executeTest(InternetGameChessking(), links)
+
+    def testIdeachess():
+        links = [('http://www.ideachess.com/chess_tactics_puzzles/checkmate_n/37431', True),        # Mate EN
+                 ('http://fr.ideachess.com/echecs_tactiques/mat_n/37431', True),                    # Mate FR
+                 ('http://it.ideachess.com/scacchi_tattica/scacco_matto_n/37431', True),            # Mate IT
+                 ('http://de.ideachess.com/chess_tactics_puzzles/checkmate_n/37431', True),         # Mate DE
+                 ('http://es.ideachess.com/chess_tactics_puzzles/checkmate_n/37431', True),         # Mate ES
+                 ('http://nl.ideachess.com/chess_tactics_puzzles/checkmate_n/37431', True),         # Mate NL
+                 ('http://ru.ideachess.com/chess_tactics_puzzles/checkmate_n/37431', True),         # Mate RU
+                 ('http://www.ideachess.com/chess_tactics_puzzles/tactics_n/32603', True),          # Tactics EN
+                 ('http://fr.ideachess.com/echecs_tactiques/tactiques_n/32603', True),              # Tactics FR
+                 ('http://it.ideachess.com/scacchi_tattica/tattica_n/32603', True),                 # Tactics IT
+                 ('http://de.ideachess.com/chess_tactics_puzzles/tactics_n/32603', True),           # Tactics DE
+                 ('http://es.ideachess.com/chess_tactics_puzzles/tactics_n/32603', True),           # Tactics ES
+                 ('http://nl.ideachess.com/chess_tactics_puzzles/tactics_n/32603', True),           # Tactics NL
+                 ('http://ru.ideachess.com/chess_tactics_puzzles/tactics_n/32603', True),           # Tactics RU
+                 ('http://www.ideachess.com/chess_tactics_puzzles/checkmate_n/123457890', True),    # Not a mate (wrong ID)
+                 ('http://www.ideachess.com/chess_tactics_puzzles/tactics_n/123457890', True),      # Not a tactics (wrong ID)
+                 ('http://www.ideachess.com', False)]                                               # Not a puzzle (homepage)
+        self.executeTest(InternetGameIdeachess(), links)
 
     def testGeneric(self):
         links = [('https://thechessworld.com/pgngames/middlegames/sacrifice-on-e6/Ivanchuk-Karjakin.pgn', True)]    # Game with UTF-8 BOM
