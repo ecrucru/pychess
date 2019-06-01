@@ -11,6 +11,7 @@ import base64
 import string
 from random import choice, randint
 
+from pychess import VERSION
 from pychess.Utils.const import FISCHERRANDOMCHESS
 from pychess.Utils.lutils.LBoard import LBoard
 from pychess.Utils.lutils.lmove import parseAny, toSAN
@@ -39,16 +40,22 @@ CAT_WS = _('Websockets')
 class InternetGameInterface:
     # Internal
     def __init__(self):
+        ''' Initialize the common data that can be used in ALL the sub-classes. '''
         self.id = None
         self.userAgent = generate_user_agent(fake=True)
 
     def is_enabled(self):
+        ''' To disable a chess provider temporarily, override this method in the sub-class. '''
         return True
 
     def get_game_id(self):
+        ''' Return the unique identifier of the game that was detected after a successful call to assign_game().
+            The value is None if no game was found earlier. '''
         return self.id
 
     def reacts_to(self, url, host):
+        ''' Return True if the URL belongs to the HOST. The sub-domains other than "www" are not supported.
+            The method is used to accept any URL when a unique identifier cannot be extracted by assign_game(). '''
         # Verify the hostname
         if url is None:
             return False
@@ -61,6 +68,8 @@ class InternetGameInterface:
         return True
 
     def json_loads(self, data):
+        ''' Load a JSON and handle the errors.
+            The value None is returned when the data are not relevant or misbuilt. '''
         try:
             if data is None or data == '':
                 return None
@@ -69,6 +78,8 @@ class InternetGameInterface:
             return None
 
     def json_field(self, data, path):
+        ''' Conveniently read a field from a JSON data. The PATH is a key like "node1/node2/key".
+            A blank string is returned in case of error. '''
         if data is None or data == '':
             return ''
         keys = path.split('/')
@@ -84,6 +95,8 @@ class InternetGameInterface:
             return value
 
     def read_data(self, response):
+        ''' Read the data from an HTTP request and execute the charset conversion.
+            The value None is returned in case of error. '''
         # Check
         if response is None:
             return None
@@ -111,6 +124,9 @@ class InternetGameInterface:
             return data
 
     def download(self, url, userAgent=False):
+        ''' Download the URL from the Internet.
+            The USERAGENT is requested by some websites to make sure that you are not a bot.
+            The value None is returned in case of error. '''
         # Check
         if url in [None, '']:
             return None
@@ -129,6 +145,11 @@ class InternetGameInterface:
             return None
 
     def download_list(self, links, userAgent=False):
+        ''' Download and concatenate the URL given in the array LINKS.
+            The USERAGENT is requested by some websites to make sure that you are not a bot.
+            The number of downloads is limited to 10.
+            The downloads that failed are dropped silently.
+            The value None is returned in case of no data or error. '''
         pgn = ''
         for i, link in enumerate(links):
             data = self.download(link, userAgent)
@@ -142,7 +163,8 @@ class InternetGameInterface:
             return pgn
 
     def async_from_sync(self, coro):
-        # TODO Not working under Linux
+        ''' The method is used for the WebSockets technique to call an asynchronous task from a synchronous task. '''
+        # TODO Not working under Linux while PyChess GUI is running
         curloop = asyncio.get_event_loop()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -152,6 +174,11 @@ class InternetGameInterface:
         return result
 
     def rebuild_pgn(self, game):
+        ''' Return an object in PGN format.
+            The keys starting with "_" are dropped silently.
+            The key "_url" becomes the first comment.
+            The key "_moves" contains the moves.
+            The key "_reason" becomes the last comment. '''
         # Check
         if game is None or game == '' or '_moves' not in game or game['_moves'] == '':
             return None
@@ -162,7 +189,7 @@ class InternetGameInterface:
             if e[:1] != '_' and game[e] not in [None, '']:
                 pgn += '[%s "%s"]\n' % (e, game[e])
         if pgn == '':
-            pgn = '[Annotator "%s"]\n' % self.userAgent
+            pgn = '[Annotator "PyChess %s"]\n' % VERSION
         pgn += "\n"
 
         # Body
@@ -178,12 +205,15 @@ class InternetGameInterface:
 
     # External
     def get_description(self):
+        ''' (Abstract) Name of the chess provider written as "Chess provider -- Technique used" '''
         pass
 
     def assign_game(self, url):
+        ''' (Abstract) Detect the unique identifier of URL '''
         pass
 
     def download_game(self):
+        ''' (Abstract) Download the game identified earlier by assign_game() '''
         pass
 
 
