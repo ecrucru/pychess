@@ -1952,6 +1952,34 @@ class InternetGameChessdb(InternetGameInterface):
         return parser.pgn
 
 
+# ChessPro.ru
+class InternetGameChesspro(InternetGameInterface):
+    def get_description(self):
+        return 'ChessPro.ru -- %s' % CAT_HTML
+
+    def assign_game(self, url):
+        return self.reacts_to(url, 'chesspro.ru')
+
+    def download_game(self):
+        # Check
+        if self.id is None:
+            return None
+
+        # Download the page
+        page = self.download(self.id)
+        if page is None:
+            return None
+
+        # Find the chess widget
+        rxp = re.compile('.*OpenGame\(\s*"g[0-9]+\"\s*,"(.*)"\s*\)\s*;.*', re.IGNORECASE)
+        lines = page.split("\n")
+        for line in lines:
+            m = rxp.match(line)
+            if m is not None:
+                return '[Annotator "ChessPro.ru"]\n%s' % m.group(1)
+        return None
+
+
 # Generic
 class InternetGameGeneric(InternetGameInterface):
     def __init__(self):
@@ -2043,6 +2071,7 @@ chess_providers = [InternetGameLichess(),
                    InternetGameChessking(),
                    InternetGameIdeachess(),
                    InternetGameChessdb(),
+                   InternetGameChesspro(),
                    InternetGameGeneric()]
 
 
