@@ -1896,6 +1896,62 @@ class InternetGameIdeachess(InternetGameInterface):
         return self.rebuild_pgn(game)
 
 
+# Chess-DB.com
+class InternetGameChessdb(InternetGameInterface):
+    def get_description(self):
+        return 'Chess-DB.com -- %s' % CAT_HTML
+
+    def assign_game(self, url):
+        # Verify the URL
+        parsed = urlparse(url)
+        if parsed.netloc.lower() not in ['www.chess-db.com', 'chess-db.com'] or 'game.jsp' not in parsed.path.lower():
+            return False
+
+        # Read the arguments
+        args = parse_qs(parsed.query)
+        if 'id' in args:
+            gid = args['id'][0]
+            rxp = re.compile('^[0-9\.]+$', re.IGNORECASE)
+            if rxp.match(gid) is not None:
+                self.id = gid
+                return True
+        return False
+
+    def download_game(self):
+        # Download
+        if self.id is None:
+            return None
+        page = self.download('https://chess-db.com/public/game.jsp?id=%s' % self.id)
+        if page is None:
+            return None
+
+        # Definition of the parser
+        class chessdbparser(HTMLParser):
+            def __init__(self):
+                HTMLParser.__init__(self)
+                self.tag_ok = False
+                self.pgn = None
+                self.pgn_tmp = None
+
+            def handle_starttag(self, tag, attrs):
+                if tag.lower() == 'input':
+                    for k, v in attrs:
+                        k = k.lower()
+                        if k == 'name' and v == 'pgn':
+                            self.tag_ok = True
+                        if k == 'value' and v.count('[') == v.count(']'):
+                            self.pgn_tmp = v
+
+            def handle_data(self, data):
+                if self.pgn is None and self.tag_ok:
+                    self.pgn = self.pgn_tmp
+
+        # Read the PGN
+        parser = chessdbparser()
+        parser.feed(page)
+        return parser.pgn
+
+
 # Generic
 class InternetGameGeneric(InternetGameInterface):
     def __init__(self):
@@ -1986,6 +2042,7 @@ chess_providers = [InternetGameLichess(),
                    InternetGameChesspuzzle(),
                    InternetGameChessking(),
                    InternetGameIdeachess(),
+                   InternetGameChessdb(),
                    InternetGameGeneric()]
 
 
