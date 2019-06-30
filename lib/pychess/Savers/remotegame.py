@@ -142,7 +142,7 @@ class InternetGameInterface:
                 response = urlopen(url)
             return self.read_data(response)
         except Exception as exception:
-            log.debug('Exception raised: %s' % repr(exception))
+            log.debug('Exception raised: %s' % str(exception))
             return None
 
     def download_list(self, links, userAgent=False):
@@ -192,7 +192,7 @@ class InternetGameInterface:
             response = urlopen(req)
             return self.read_data(response)
         except Exception as exception:
-            log.debug('Exception raised: %s' % repr(exception))
+            log.debug('Exception raised: %s' % str(exception))
             return None
 
     def rebuild_pgn(self, game):
@@ -278,6 +278,17 @@ class InternetGameLichess(InternetGameInterface):
         return 'Lichess.org -- %s' % CAT_DL
 
     def assign_game(self, url):
+        # Retrieve the ID of the broadcast
+        rxp = re.compile('^https?:\/\/([\S]+\.)?lichess\.(org|dev)\/broadcast\/[a-z0-9\-]+\/([a-z0-9]+)[\/\?\#]?', re.IGNORECASE)
+        m = rxp.match(url)
+        if m is not None:
+            gid = m.group(3)
+            if len(gid) == 8:
+                self.url_type = TYPE_STUDY
+                self.id = gid
+                self.url_tld = m.group(2)
+                return True
+
         # Retrieve the ID of the study
         rxp = re.compile('^https?:\/\/([\S]+\.)?lichess\.(org|dev)\/study\/([a-z0-9]+(\/[a-z0-9]+)?)(\.pgn)?\/?([\S\/]+)?$', re.IGNORECASE)
         m = rxp.match(url)
