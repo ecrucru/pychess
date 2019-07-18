@@ -96,6 +96,8 @@ class UCIEngine(ProtocolEngine):
         if analyze_mode:
             if self.hasOption("Ponder"):
                 self.setOption('Ponder', False)
+            if self.hasOption("UCI_LimitStrength"):
+                self.setOption('UCI_LimitStrength', False)
         if self.hasOption("UCI_AnalyseMode"):
             self.setOption("UCI_AnalyseMode", analyze_mode)
 
