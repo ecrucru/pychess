@@ -1284,11 +1284,11 @@ class InternetGameChessCom(InternetGameInterface):
         return 'Chess.com -- %s' % CAT_HTML
 
     def assign_game(self, url):
-        rxp = re.compile('^https?:\/\/([\S]+\.)?chess\.com\/([a-z]+\/)?(live|daily)\/game\/([0-9]+)[\/\?\#]?', re.IGNORECASE)
+        rxp = re.compile('^https?:\/\/([\S]+\.)?chess\.com\/([a-z\/]+)?(live|daily)\/([a-z\/]+)?([0-9]+)[\/\?\#]?', re.IGNORECASE)
         m = rxp.match(url)
         if m is not None:
             self.url_type = m.group(3)
-            self.id = m.group(4)
+            self.id = m.group(5)
             return True
         return False
 
@@ -1303,106 +1303,68 @@ class InternetGameChessCom(InternetGameInterface):
         if page is None:
             return None
 
-        # Logic for the live games
-        if self.url_type.lower() == 'live':
-            # Extract the JSON
-            page = page.replace("\n", '')
-            pos1 = page.find("init('live'")
-            if pos1 == -1:
-                return None
-            pos1 = page.find('{', pos1 + 1)
-            pos1 = page.find('{', pos1 + 1)
-            if pos1 == -1:
-                return None
-            c = 1
-            pos2 = pos1
-            while pos2 < len(page):
-                pos2 += 1
-                if page[pos2] == '{':
-                    c += 1
-                if page[pos2] == '}':
-                    c -= 1
-                if c == 0:
-                    break
-            if c != 0:
-                return None
+        # Extract the JSON
+        bourne = ''
+        pos1 = page.find('window.chesscom.dailyGame')
+        if pos1 != -1:
+            pos1 = page.find('(', pos1)
+            pos2 = page.find(')', pos1 + 1)
+            if pos2 > pos1:
+                bourne = page[pos1 + 2:pos2 - 1].replace('\\\\\\/', '/').replace('\\"', '"')
+        if bourne == '':
+            return None
+        chessgame = self.json_loads(bourne)
+        chessgame = self.json_field(chessgame, 'game')
+        if chessgame == '':
+            return None
 
-            # Extract the PGN
-            bourne = page[pos1:pos2 + 1].replace('&quot;', '"').replace('\\r', '')
-            chessgame = self.json_loads(bourne)
-            pgn = self.json_field(chessgame, 'pgn').replace('\\n', "\n")
-            if pgn == '':
-                return None
-            else:
-                return pgn
-
-        # Logic for the daily games
-        elif self.url_type.lower() == 'daily':
-            # Extract the JSON
-            bourne = ''
-            pos1 = page.find('window.chesscom.dailyGame')
-            if pos1 != -1:
-                pos1 = page.find('(', pos1)
-                pos2 = page.find(')', pos1 + 1)
-                if pos2 > pos1:
-                    bourne = page[pos1 + 2:pos2 - 1].replace('\\\\\\/', '/').replace('\\"', '"')
-            if bourne == '':
-                return None
-            chessgame = self.json_loads(bourne)
-            chessgame = self.json_field(chessgame, 'game')
-            if chessgame == '':
-                return None
-
-            # Header
-            headers = self.json_field(chessgame, 'pgnHeaders')
-            if headers == '':
-                game = {}
-            else:
-                game = headers
-            if 'Variant' in game and game['Variant'] == 'Chess960':
-                game['Variant'] = CHESS960
-            game['_url'] = url
-
-            # Body
-            moves = self.json_field(chessgame, 'moveList')
-            if moves == '':
-                return None
-            game['_moves'] = ''
-            board = LBoard(variant=FISCHERRANDOMCHESS)
-            if 'FEN' in game:
-                board.applyFen(game['FEN'])
-            else:
-                board.applyFen(DEFAULT_BOARD)
-            while len(moves) > 0:
-                def decode(move):
-                    magic = 'aa1ia2qa3ya4Ga5Oa6Wa74a8bb1jb2rb3zb4Hb5Pb6Xb75b8cc1kc2sc3Ac4Ic5Qc6Yc76c8dd1ld2td3Bd4Jd5Rd6Zd77d8ee1me2ue3Ce4Ke5Se60e78e8ff1nf2vf3Df4Lf5Tf61f79f8gg1og2wg3Eg4Mg5Ug62g7!g8hh1ph2xh3Fh4Nh5Vh63h7?h8'
-                    m1 = move[:1]
-                    m2 = move[1:]
-                    for i in range(64):
-                        p = 3 * i
-                        if magic[p] == m1:
-                            m1 = magic[p + 1:p + 3]
-                        if magic[p] == m2:
-                            m2 = magic[p + 1:p + 3]
-                    return '%s%s' % (m1, m2)
-
-                move = decode(moves[:2])
-                moves = moves[2:]
-                try:
-                    if self.use_an:
-                        kmove = parseAny(board, move)
-                        game['_moves'] += toSAN(board, kmove) + ' '
-                        board.applyMove(kmove)
-                    else:
-                        game['_moves'] += move + ' '
-                except Exception:
-                    return None
-
-            # Final PGN
-            return self.rebuild_pgn(game)
-
+        # Header
+        headers = self.json_field(chessgame, 'pgnHeaders')
+        if headers == '':
+            game = {}
         else:
-            assert(False)
+            game = headers
+        if 'Variant' in game and game['Variant'] == 'Chess960':
+            game['Variant'] = CHESS960
+        game['_url'] = url
+
+        # Body
+        moves = self.json_field(chessgame, 'moveList')
+        if moves == '':
+            return None
+        game['_moves'] = ''
+        board = LBoard(variant=FISCHERRANDOMCHESS)
+        if 'FEN' in game:
+            board.applyFen(game['FEN'])
+        else:
+            board.applyFen(DEFAULT_BOARD)
+        while len(moves) > 0:
+            def decode(move):
+                magic = 'aa1ia2qa3ya4Ga5Oa6Wa74a8bb1jb2rb3zb4Hb5Pb6Xb75b8cc1kc2sc3Ac4Ic5Qc6Yc76c8dd1ld2td3Bd4Jd5Rd6Zd77d8ee1me2ue3Ce4Ke5Se60e78e8ff1nf2vf3Df4Lf5Tf61f79f8gg1og2wg3Eg4Mg5Ug62g7!g8hh1ph2xh3Fh4Nh5Vh63h7?h8'
+                m1 = move[:1]
+                m2 = move[1:]
+                for i in range(64):
+                    p = 3 * i
+                    if magic[p] == m1:
+                        m1 = magic[p + 1:p + 3]
+                    if magic[p] == m2:
+                        m2 = magic[p + 1:p + 3]
+                return '%s%s' % (m1, m2)
+
+            move = decode(moves[:2])
+            moves = moves[2:]
+            try:
+                if self.use_an:
+                    kmove = parseAny(board, move)
+                    game['_moves'] += toSAN(board, kmove) + ' '
+                    board.applyMove(kmove)
+                else:
+                    game['_moves'] += move + ' '
+            except Exception:
+                return None
+
+        # Final PGN
+        return self.rebuild_pgn(game)
 
 
 # Schach-Spielen.eu

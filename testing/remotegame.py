@@ -131,6 +131,7 @@ class RemoteGameTestCase(unittest.TestCase):
     def testChessCom(self):
         links = [('https://www.CHESS.com/live/game/3638784952#anchor', True),               # Live game
                  ('https://chess.com/de/live/game/3635508736?username=rikikits', True),     # Live game Chess960
+                 ('https://www.chess.com/analysis/game/live/3874372792', True),             # Live analysis
                  ('https://www.chess.com/daily/game/223897998', True),                      # Daily game
                  ('https://www.chess.com/DAILY/game/224478042', True),                      # Daily game
                  ('https://www.chess.com/daily/game/225006782', True),                      # Daily game Chess960
