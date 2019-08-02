@@ -157,13 +157,6 @@ def refresh_elo_rating_change(widgets):
     persp = perspective_manager.get_perspective("games")
     gamemodel = persp.cur_gmwidg().gamemodel
 
-    site = gamemodel.tags["Site"]
-    if site is not None and ("lichess.org" in site or "chessclub.com" in site or "freechess.org" in site):
-        # TODO : lichess takes 3 parameters per player
-        widgets["w_elo_change"].set_text("")
-        widgets["b_elo_change"].set_text("")
-        return
-
     welo = widgets["whiteelo_entry"].get_text()
     belo = widgets["blackelo_entry"].get_text()
 
