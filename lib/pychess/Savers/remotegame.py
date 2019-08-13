@@ -289,6 +289,17 @@ class InternetGameLichess(InternetGameInterface):
                 self.url_tld = m.group(2)
                 return True
 
+        # Retrieve the ID of the practice
+        rxp = re.compile('^https?:\/\/([\S]+\.)?lichess\.(org|dev)\/practice\/[\w\-\/]+\/([a-z0-9]+\/[a-z0-9]+)(\.pgn)?\/?([\S\/]+)?$', re.IGNORECASE)
+        m = rxp.match(url)
+        if m is not None:
+            gid = m.group(3)
+            if len(gid) == 17:
+                self.url_type = TYPE_STUDY
+                self.id = gid
+                self.url_tld = m.group(2)
+                return True
+
         # Retrieve the ID of the study
         rxp = re.compile('^https?:\/\/([\S]+\.)?lichess\.(org|dev)\/study\/([a-z0-9]+(\/[a-z0-9]+)?)(\.pgn)?\/?([\S\/]+)?$', re.IGNORECASE)
         m = rxp.match(url)
