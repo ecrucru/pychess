@@ -95,8 +95,9 @@ name2variant["Wild/8a"] = PawnsPassedBoard
 
 # Lichess pgn export names
 name2variant["Standard"] = NormalBoard
+name2variant["Chess960"] = FischerandomBoard
 name2variant["Antichess"] = SuicideBoard
-name2variant["King of the hill"] = KingOfTheHillBoard
+name2variant["King of the Hill"] = KingOfTheHillBoard
 name2variant["Three-check"] = ThreeCheckBoard
-name2variant["Racing kings"] = RacingKingsBoard
+name2variant["Racing Kings"] = RacingKingsBoard
 name2variant["Horde"] = HordeBoard

@@ -341,28 +341,6 @@ class InternetGameLichess(InternetGameInterface):
         bourne = self.read_data(response)
         return self.json_loads(bourne)
 
-    def adjust_tags(self, pgn):
-        # Check
-        if pgn in [None, '']:
-            return pgn
-
-        # Replace the tags
-        reps = [('Variant', 'UltraBullet', ''),
-                ('Variant', 'Bullet', ''),
-                ('Variant', 'Blitz', ''),
-                ('Variant', 'Rapid', ''),
-                ('Variant', 'Classical', ''),
-                ('Variant', 'Correspondence', ''),
-                ('Variant', 'Standard', ''),
-                ('Variant', 'Chess960', CHESS960),
-                ('Variant', 'ThreeCheck', '3check'),
-                ('Variant', 'Antichess', 'Suicide')]  # TODO Use shared constants
-        for rep in reps:
-            tag, s, d = rep
-            pgn = pgn.replace('[%s "%s"]' % (tag, s), '[%s "%s"]' % (tag, d))
-        pgn = pgn.replace('[Variant ""]\n', '')
-        return pgn
-
     def download_game(self):
         # Check
         if None in [self.id, self.url_tld]:
@@ -374,7 +352,7 @@ class InternetGameLichess(InternetGameInterface):
             api = self.query_api('/import/master/%s/white' % self.id)
             if self.json_field(api, 'game/status/name') != 'started':
                 url = 'https://lichess.%s/game/export/%s?literate=1' % (self.url_tld, self.id)
-                return self.adjust_tags(self.download(url))
+                return self.download(url)
 
             # Rebuild the PGN file
             else:
@@ -393,7 +371,7 @@ class InternetGameLichess(InternetGameInterface):
                 for move in moves:
                     if move['ply'] > 0:
                         game['_moves'] += ' %s' % move['san']
-                return self.adjust_tags(self.rebuild_pgn(game))
+                return self.rebuild_pgn(game)
 
         # Logic for the studies
         elif self.url_type == TYPE_STUDY:
