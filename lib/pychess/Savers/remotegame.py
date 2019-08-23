@@ -86,10 +86,16 @@ class InternetGameInterface:
         keys = path.split('/')
         value = data
         for key in keys:
-            if key in value:
-                value = value[key]
+            if key.startswith('[') and key.endswith(']'):
+                try:
+                    value = value[int(key[1:-1])]
+                except (ValueError, TypeError, IndexError):
+                    return ''
             else:
-                return ''
+                if key in value:
+                    value = value[key]
+                else:
+                    return ''
         if value is None:
             return ''
         else:
@@ -115,7 +121,7 @@ class InternetGameInterface:
                     data = bytes.decode('latin-1')
                 except Exception:
                     log.debug('Error in the decoding of the data')
-                    data = None
+                    return None
 
         # Result
         data = data.replace("\ufeff", '').replace("\r", '').strip()
