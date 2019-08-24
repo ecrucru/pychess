@@ -17,6 +17,7 @@ def get_cpu():
 
     # Instruction sets
     try:
+        info = ''
         with open('/proc/cpuinfo') as f:
             info = f.read()
         result['popcnt'] = 'popcnt' in info
