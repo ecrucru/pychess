@@ -20,7 +20,7 @@ from pychess.compat import create_task
 from pychess.System.Log import log
 from pychess.System import conf, uistuff, prefix
 from pychess.Utils.const import HINT, NAME, SPY, NORMALCHESS
-from pychess.Utils.checkversion import checkversion
+from pychess.Utils.checkversion import isgit, checkversion
 from pychess.widgets import enginesDialog
 from pychess.widgets import newGameDialog
 from pychess.widgets.Background import hexcol
@@ -736,7 +736,7 @@ class PyChess(Gtk.Application):
         self.aboutdialog.set_program_name(NAME)
         self.aboutdialog.set_copyright("Copyright © 2006-2019")
         self.aboutdialog.set_version(VERSION_NAME + " " + VERSION)
-        if os.path.isdir(prefix.addDataPrefix(".git")):
+        if isgit():
             try:
                 self.git_rev = subprocess.check_output(["git", "describe", "--tags"]).decode().strip()
                 self.aboutdialog.set_version('%s Git %s' % (VERSION_NAME, self.git_rev))
