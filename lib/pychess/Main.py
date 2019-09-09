@@ -273,14 +273,16 @@ class GladeHandlers:
         ok = False
         clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
         text = clipboard.wait_for_text()
-        if text not in [None, '']:
-            try:
-                pgn = PGNFile(StringIO(text))
-                pgn.loadToModel(None)
-                newGameDialog.loadPgnAndRun(text)
-                ok = True
-            except Exception:
-                pass
+        if text is not None:
+            text = text.strip()
+            if text != '':
+                try:
+                    pgn = PGNFile(StringIO(text))
+                    pgn.loadToModel(None)
+                    newGameDialog.loadPgnAndRun(text)
+                    ok = True
+                except Exception:
+                    pass
         if not ok:
             dialog = Gtk.MessageDialog(mainwindow(), type=Gtk.MessageType.ERROR, buttons=Gtk.ButtonsType.OK)
             dialog.set_markup(_('The clipboard contains no relevant chess data.'))
