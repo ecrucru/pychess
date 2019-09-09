@@ -895,12 +895,9 @@
                       </object>
                     </child>
                     <child>
-                      <object class="GtkMenuItem" id="translate_this_application">
-                        <property name="use_action_appearance">False</property>
+                      <object class="GtkSeparatorMenuItem" id="skillelinje1">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Translate PyChess</property>
-                        <signal name="activate" handler="translate_this_application_activate" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -915,9 +912,21 @@
                       </object>
                     </child>
                     <child>
-                      <object class="GtkSeparatorMenuItem" id="skillelinje1">
+                      <object class="GtkMenuItem" id="translate_this_application">
+                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Translate PyChess</property>
+                        <signal name="activate" handler="translate_this_application_activate" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkMenuItem" id="report_issue">
+                        <property name="use_action_appearance">False</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Report an issue</property>
+                        <signal name="activate" handler="report_issue_activate" swapped="no"/>
                       </object>
                     </child>
                     <child>

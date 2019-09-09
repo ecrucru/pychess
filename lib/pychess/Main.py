@@ -546,12 +546,15 @@ class GladeHandlers:
     def on_how_to_play1_activate(self, widget):
         webbrowser.open(_("http://en.wikipedia.org/wiki/Rules_of_chess"))
 
-    def translate_this_application_activate(self, widget):
-        webbrowser.open("https://www.transifex.com/projects/p/pychess/")
-
     def on_TipOfTheDayMenuItem_activate(self, widget):
         tip_of_the_day = TipOfTheDay()
         tip_of_the_day.show()
+
+    def translate_this_application_activate(self, widget):
+        webbrowser.open("https://www.transifex.com/projects/p/pychess/")
+
+    def report_issue_activate(self, widget):
+        webbrowser.open("https://github.com/pychess/pychess/issues")
 
 
 class PyChess(Gtk.Application):
