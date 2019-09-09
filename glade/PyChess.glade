@@ -435,12 +435,6 @@
                       </object>
                     </child>
                     <child>
-                      <object class="GtkSeparatorMenuItem" id="skillelinje14">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                      </object>
-                    </child>
-                    <child>
                       <object class="GtkImageMenuItem" id="close1">
                         <property name="label">gtk-close</property>
                         <property name="use_action_appearance">False</property>
@@ -451,6 +445,12 @@
                         <property name="use_stock">True</property>
                         <property name="accel_group">accelgroup1</property>
                         <signal name="activate" handler="on_close1_activate" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparatorMenuItem" id="skillelinje14">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
                       </object>
                     </child>
                     <child>
