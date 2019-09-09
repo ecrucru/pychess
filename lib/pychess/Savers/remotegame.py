@@ -15,15 +15,18 @@ from pychess import VERSION
 from pychess.Utils.const import FISCHERRANDOMCHESS
 from pychess.Utils.lutils.LBoard import LBoard
 from pychess.Utils.lutils.lmove import parseAny, toSAN
+from pychess.System.cpu import get_cpu
 from pychess.System.Log import log
 from pychess.System.useragent import generate_user_agent
 
 # import pdb
 # def _(p):
 #     return p
-# import ssl
-# ssl._create_default_https_context = ssl._create_unverified_context  # Chess24, ICCF
 
+if get_cpu()['release'] == 'xp':
+    log.debug('Activating the unsecure SSL context for the old Windows XP')
+    import ssl
+    ssl._create_default_https_context = ssl._create_unverified_context  # Chess24, ICCF
 
 TYPE_NONE, TYPE_GAME, TYPE_STUDY, TYPE_PUZZLE, TYPE_EVENT = range(5)
 CHESS960 = 'Fischerandom'
