@@ -462,6 +462,7 @@ class Sidepanel:
         textedit.set_editable(True)
         textedit.set_cursor_visible(True)
         textedit.set_wrap_mode(Gtk.WrapMode.WORD)
+        textedit.set_accepts_tab(False)
 
         textbuffer = textedit.get_buffer()
         textbuffer.set_text(board.children[index])
