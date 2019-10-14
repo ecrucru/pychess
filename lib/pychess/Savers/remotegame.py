@@ -332,7 +332,7 @@ class InternetGameLichess(InternetGameInterface):
                 return True
 
         # Retrieve the ID of the game
-        rxp = re.compile('^https?:\/\/([\S]+\.)?lichess\.(org|dev)\/(game\/export\/)?([a-z0-9]+)\/?([\S\/]+)?$', re.IGNORECASE)  # More permissive
+        rxp = re.compile('^https?:\/\/([\S]+\.)?lichess\.(org|dev)\/(game\/export\/|embed\/)?([a-z0-9]+)\/?([\S\/]+)?$', re.IGNORECASE)  # More permissive
         m = rxp.match(url)
         if m is not None:
             gid = m.group(4)

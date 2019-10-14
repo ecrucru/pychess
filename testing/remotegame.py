@@ -37,6 +37,7 @@ class RemoteGameTestCase(unittest.TestCase):
         links = [('http://lichess.org/CA4bR2b8/black/analysis#12', True),                           # Game in advanced position
                  ('https://lichess.org/CA4bR2b8', True),                                            # Canonical address
                  ('https://lichess.org/game/export/CA4bR2b8', True),                                # Download link
+                 ('https://LICHESS.org/embed/CA4bR2b8/black?theme=brown', True),                    # Embedded game
                  ('http://fr.lichess.org/@/thibault', False),                                       # Not a game (user page)
                  ('http://lichess.org/blog', False),                                                # Not a game (page)
                  ('http://lichess.dev/ABCD1234', False),                                            # Not a game (wrong ID)
