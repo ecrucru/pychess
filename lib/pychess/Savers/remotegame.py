@@ -1351,16 +1351,23 @@ class InternetGameChessCom(InternetGameInterface):
             board.applyFen(DEFAULT_BOARD)
         while len(moves) > 0:
             def decode(move):
-                magic = 'aa1ia2qa3ya4Ga5Oa6Wa74a8bb1jb2rb3zb4Hb5Pb6Xb75b8cc1kc2sc3Ac4Ic5Qc6Yc76c8dd1ld2td3Bd4Jd5Rd6Zd77d8ee1me2ue3Ce4Ke5Se60e78e8ff1nf2vf3Df4Lf5Tf61f79f8gg1og2wg3Eg4Mg5Ug62g7!g8hh1ph2xh3Fh4Nh5Vh63h7?h8'
-                m1 = move[:1]
-                m2 = move[1:]
-                for i in range(64):
-                    p = 3 * i
-                    if magic[p] == m1:
-                        m1 = magic[p + 1:p + 3]
-                    if magic[p] == m2:
-                        m2 = magic[p + 1:p + 3]
-                return '%s%s' % (m1, m2)
+                # Mapping
+                map = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?{~}(^)[_]@#$,./&-*++='
+                pieces = 'qnrbkp'
+
+                # Analyze the move
+                sFrom = sTo = sPromo = sDrop = ''
+                posFrom = map.index(move[:1])
+                posTo = map.index(move[1:])
+                if posTo > 63:
+                    sPromo = pieces[(posTo - 64) // 3]
+                    posTo = posFrom + (-8 if posFrom < 16 else 8) + (posTo - 1) % 3 - 1
+                if posFrom > 75:
+                    sDrop = '@' + pieces[posFrom - 79]
+                else:
+                    sFrom = map[posFrom % 8] + str((posFrom // 8 + 1))
+                sTo = map[posTo % 8] + str((posTo // 8 + 1))
+                return '%s%s%s%s' % (sFrom, sTo, sPromo, sDrop)
 
             move = decode(moves[:2])
             moves = moves[2:]
