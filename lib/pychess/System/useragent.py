@@ -1,11 +1,19 @@
 from random import choice, randint
 from pychess import VERSION
 
+last_user_agent = None
 
-def generate_user_agent(fake):
-    if fake == False:
+
+def generate_user_agent(fake, renew=False):
+    global last_user_agent
+    if not fake:
         return 'PyChess %s' % VERSION
     else:
+        # Reuse the last known user agent
+        if not renew and last_user_agent is not None:
+            return last_user_agent
+
+        # New fake user agent
         engine = ['Mozilla/3.0', 'Mozilla/4.0', 'Mozilla/5.0', 'Opera/4.0', 'Opera/5.0']
         os = ['compatible', 'Linux', 'Ubuntu', 'SunOS', 'Macintosh', 'Windows', 'Windows 98', 'Windows NT 5.0', 'Windows NT 5.1', 'Windows NT 5.2', 'Windows NT 6.0', 'Windows NT 6.1', 'Windows NT 6.2', 'Windows NT 6.3', 'Windows NT 10.0', 'X11']
         arch = ['U', 'Linux i686', 'Intel Max OS X']
@@ -13,4 +21,5 @@ def generate_user_agent(fake):
         rev = 'rv:%d.%d.%d.%d' % (randint(1, 2), randint(0, 9), randint(0, 9), randint(0, 9))
         product = ['Gecko', 'Firefox', 'Chrome']
         release = randint(32, 75)
-        return '%s (%s; %s; %s; %s) %s/%d.0' % (choice(engine), choice(os), choice(arch), choice(lang), rev, choice(product), release)
+        last_user_agent = '%s (%s; %s; %s; %s) %s/%d.0' % (choice(engine), choice(os), choice(arch), choice(lang), rev, choice(product), release)
+        return last_user_agent
