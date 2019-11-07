@@ -741,16 +741,18 @@ class InternetGame365chess(InternetGameInterface):
             line = line.strip()
 
             if line.startswith('<tr><td><h1>') and line.endswith('</h1></td></tr>'):
-                rxp = re.compile('^([\w\-\s]+) \(([0-9]+)\) vs\. ([\w\-\s]+) \(([0-9]+)\)$', re.IGNORECASE)
+                rxp = re.compile('^([\w\-\s]+)(\(([0-9]+)\))? vs\. ([\w\-\s]+)(\(([0-9]+)\))?$', re.IGNORECASE)
                 m = rxp.match(line[12:-15])
                 if m is None:
                     game['White'] = _('Unknown')
                     game['Black'] = _('Unknown')
                 else:
-                    game['White'] = str(m.group(1))
-                    game['WhiteElo'] = str(m.group(2))
-                    game['Black'] = str(m.group(3))
-                    game['BlackElo'] = str(m.group(4))
+                    game['White'] = str(m.group(1)).strip()
+                    if m.group(3) is not None:
+                        game['WhiteElo'] = str(m.group(3)).strip()
+                    game['Black'] = str(m.group(4)).strip()
+                    if m.group(6) is not None:
+                        game['BlackElo'] = str(m.group(6)).strip()
                 continue
 
             if line.startswith('<tr><td><h2>') and line.endswith('</h2></td></tr>'):
@@ -2143,11 +2145,11 @@ def get_internet_game_as_pgn(url):
         if prov.assign_game(url):
             # Download
             log.debug('Responding chess provider: %s' % prov.get_description())
-            try:
-                pgn = prov.download_game()
-                pgn = prov.sanitize(pgn)
-            except Exception:
-                pgn = None
+            #try:
+            pgn = prov.download_game()
+            pgn = prov.sanitize(pgn)
+            #except Exception:
+            #    pgn = None
 
             # Check
             if pgn is None:
