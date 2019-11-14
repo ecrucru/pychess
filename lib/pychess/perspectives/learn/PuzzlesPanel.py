@@ -5,7 +5,9 @@ from gi.repository import Gtk
 
 from pychess.compat import create_task
 from pychess.System.prefix import addDataPrefix
-from pychess.Utils.const import WHITE, BLACK, LOCAL, NORMALCHESS, ARTIFICIAL, WAITING_TO_START, HINT, PRACTICE_GOAL_REACHED, PUZZLE
+from pychess.Utils.const import WHITE, BLACK, LOCAL, NORMALCHESS, ARTIFICIAL, \
+    WAITING_TO_START, HINT, PRACTICE_GOAL_REACHED, PUZZLE, COLUMN_ROW_RESET, \
+    GTK_ICON_VIEW_REFRESH
 from pychess.Utils.LearnModel import LearnModel
 from pychess.Utils.TimeModel import TimeModel
 from pychess.Variants import variants
@@ -18,6 +20,7 @@ from pychess.Savers.olv import OLVFile
 from pychess.Savers.pgn import PGNFile
 from pychess.System import conf
 from pychess.System.protoopen import protoopen
+from pychess.widgets import mainwindow
 
 __title__ = _("Puzzles")
 
@@ -65,6 +68,12 @@ class Sidepanel():
 
         renderer = Gtk.CellRendererProgress()
         column = Gtk.TreeViewColumn(_("Progress"), renderer, text=3, value=4)
+        column.set_expand(True)
+        self.tv.append_column(column)
+
+        renderer = Gtk.CellRendererPixbuf()
+        column = Gtk.TreeViewColumn(_("Reset"), renderer, icon_name=5)
+        column.set_name(COLUMN_ROW_RESET)
         self.tv.append_column(column)
 
         self.tv.connect("row-activated", self.row_activated)
@@ -72,22 +81,21 @@ class Sidepanel():
         def on_progress_updated(solving_progress, key, progress):
             for i, row in enumerate(self.store):
                 if row[0] == key:
-                    solved = progress.count(1)
-                    percent = 0 if not solved else round((solved * 100.) / len(progress))
+                    progress_ratio_string, percent, reset_icon = self._compute_progress_info(progress)
                     treeiter = self.store.get_iter(Gtk.TreePath(i))
-                    self.store[treeiter][3] = "%s / %s" % (solved, len(progress))
+                    self.store[treeiter][3] = progress_ratio_string
                     self.store[treeiter][4] = percent
+                    self.store[treeiter][5] = reset_icon
         puzzles_solving_progress.connect("progress_updated", on_progress_updated)
 
-        self.store = Gtk.ListStore(str, str, str, str, int)
+        self.store = Gtk.ListStore(str, str, str, str, int, str)
 
         @asyncio.coroutine
         def coro():
             for file_name, title, author in PUZZLES:
                 progress = puzzles_solving_progress.get(file_name)
-                solved = progress.count(1)
-                percent = 0 if not solved else round((solved * 100.) / len(progress))
-                self.store.append([file_name, title, author, "%s / %s" % (solved, len(progress)), percent])
+                progress_ratio_string, percent, reset_icon = self._compute_progress_info(progress)
+                self.store.append([file_name, title, author, progress_ratio_string, percent, reset_icon])
                 yield from asyncio.sleep(0)
         create_task(coro())
 
@@ -108,11 +116,34 @@ class Sidepanel():
         if path is None:
             return
         else:
-            filename = PUZZLES[path[0]][0]
-            conf.set("categorycombo", PUZZLE)
-            from pychess.widgets.TaskerManager import learn_tasker
-            learn_tasker.learn_combo.set_active(path[0])
-            start_puzzle_from(filename)
+            filename, title, *_ = PUZZLES[path[0]]
+            if col.get_name() == COLUMN_ROW_RESET:
+                self._reset_progress_file(filename, title)
+            else:
+                conf.set("categorycombo", PUZZLE)
+                from pychess.widgets.TaskerManager import learn_tasker
+                learn_tasker.learn_combo.set_active(path[0])
+                start_puzzle_from(filename)
+
+    @staticmethod
+    def _compute_progress_info(progress):
+        solved = progress.count(1)
+        percent = 0 if solved == 0 else round((solved * 100.) / len(progress))
+        reset_icon = None if solved == 0 else GTK_ICON_VIEW_REFRESH
+        return "%s / %s" % (solved, len(progress)), percent, reset_icon
+
+    def _reset_progress_file(self, filename, title):
+        progress = puzzles_solving_progress[filename]
+        _str, _percent, reset_icon = self._compute_progress_info(progress)
+        if reset_icon is not None:
+            dialog = Gtk.MessageDialog(mainwindow(), 0, Gtk.MessageType.QUESTION,
+                                       Gtk.ButtonsType.OK_CANCEL,
+                                       _('This will reset the progress to 0 for the puzzle "{title}"').format(title=title))
+            response = dialog.run()
+            if response == Gtk.ResponseType.OK:
+                puzzles_solving_progress[filename] = [0] * len(progress)
+                self.persp.update_progress(None, None, None)
+            dialog.destroy()
 
 
 def start_puzzle_from(filename, index=None):
