@@ -12,7 +12,7 @@ import string
 from random import choice, randint
 
 from pychess import VERSION
-from pychess.Utils.const import FISCHERRANDOMCHESS
+from pychess.Utils.const import CRAZYHOUSECHESS, FISCHERRANDOMCHESS
 from pychess.Utils.lutils.LBoard import LBoard
 from pychess.Utils.lutils.lmove import parseAny, toSAN
 from pychess.System.cpu import get_cpu
@@ -1346,7 +1346,10 @@ class InternetGameChessCom(InternetGameInterface):
         if moves == '':
             return None
         game['_moves'] = ''
-        board = LBoard(variant=FISCHERRANDOMCHESS)
+        if 'Variant' in game and game['Variant'] == 'Crazyhouse':
+            board = LBoard(variant=CRAZYHOUSECHESS)
+        else:
+            board = LBoard(variant=FISCHERRANDOMCHESS)
         if 'FEN' in game:
             board.applyFen(game['FEN'])
         else:
@@ -1365,11 +1368,11 @@ class InternetGameChessCom(InternetGameInterface):
                     sPromo = pieces[(posTo - 64) // 3]
                     posTo = posFrom + (-8 if posFrom < 16 else 8) + (posTo - 1) % 3 - 1
                 if posFrom > 75:
-                    sDrop = '@' + pieces[posFrom - 79]
+                    sDrop = pieces[posFrom - 79].upper() + '@'
                 else:
                     sFrom = map[posFrom % 8] + str((posFrom // 8 + 1))
                 sTo = map[posTo % 8] + str((posTo // 8 + 1))
-                return '%s%s%s%s' % (sFrom, sTo, sPromo, sDrop)
+                return '%s%s%s%s' % (sDrop, sFrom, sTo, sPromo)
 
             move = decode(moves[:2])
             moves = moves[2:]
@@ -2145,11 +2148,11 @@ def get_internet_game_as_pgn(url):
         if prov.assign_game(url):
             # Download
             log.debug('Responding chess provider: %s' % prov.get_description())
-            #try:
-            pgn = prov.download_game()
-            pgn = prov.sanitize(pgn)
-            #except Exception:
-            #    pgn = None
+            try:
+                pgn = prov.download_game()
+                pgn = prov.sanitize(pgn)
+            except Exception:
+                pgn = None
 
             # Check
             if pgn is None:
