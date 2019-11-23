@@ -32,6 +32,7 @@ TYPE_NONE, TYPE_GAME, TYPE_STUDY, TYPE_PUZZLE, TYPE_EVENT = range(5)
 CHESS960 = 'Fischerandom'
 DEFAULT_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 DEFAULT_AN = True  # To rebuild a readable PGN
+EXTRA = True
 
 CAT_DL = _('Download link')
 CAT_HTML = _('HTML parsing')
@@ -46,7 +47,7 @@ class InternetGameInterface:
     def __init__(self):
         ''' Initialize the common data that can be used in ALL the sub-classes. '''
         self.id = None
-        self.userAgent = generate_user_agent(fake=True)
+        self.userAgent = generate_user_agent(fake=EXTRA)
 
     def is_enabled(self):
         ''' To disable a chess provider temporarily, override this method in the sub-class. '''
@@ -81,7 +82,7 @@ class InternetGameInterface:
         except ValueError:
             return None
 
-    def json_field(self, data, path):
+    def json_field(self, data, path, default=''):
         ''' Conveniently read a field from a JSON data. The PATH is a key like "node1/node2/key".
             A blank string is returned in case of error. '''
         if data in [None, '']:
@@ -99,10 +100,7 @@ class InternetGameInterface:
                     value = value[key]
                 else:
                     return ''
-        if value is None:
-            return ''
-        else:
-            return value
+        return default if value in [None, ''] else value
 
     def read_data(self, response):
         ''' Read the data from an HTTP request and execute the charset conversion.
@@ -359,28 +357,35 @@ class InternetGameLichess(InternetGameInterface):
         if self.url_type == TYPE_GAME:
             # Download the finished game
             api = self.query_api('/import/master/%s/white' % self.id)
-            if self.json_field(api, 'game/status/name') != 'started':
+            game = self.json_field(api, 'game')
+            if 'winner' in game:
                 url = 'https://lichess.%s/game/export/%s?literate=1' % (self.url_tld, self.id)
                 return self.download(url)
+            else:
+                if not EXTRA and game['rated']:
+                    return None            
 
             # Rebuild the PGN file
+            game = {}
+            game['_url'] = 'https://lichess.%s%s' % (self.url_tld, self.json_field(api, 'url/round'))
+            game['Variant'] = self.json_field(api, 'game/variant/name')
+            game['FEN'] = self.json_field(api, 'game/initialFen')
+            game['SetUp'] = '1'
+            game['White'] = self.json_field(api, 'player/name', self.json_field(api, 'player/user/username', 'Anonymous'))
+            game['WhiteElo'] = self.json_field(api, 'player/rating')
+            game['Black'] = self.json_field(api, 'opponent/name', self.json_field(api, 'opponent/user/username', 'Anonymous'))
+            game['BlackElo'] = self.json_field(api, 'opponent/rating')
+            if self.json_field(api, 'clock') != '':
+                game['TimeControl'] = '%d+%d' % (self.json_field(api, 'clock/initial'), self.json_field(api, 'clock/increment'))
             else:
-                game = {}
-                game['_url'] = 'https://lichess.%s%s' % (self.url_tld, self.json_field(api, 'url/round'))
-                game['Variant'] = self.json_field(api, 'game/variant/key')
-                game['FEN'] = self.json_field(api, 'game/initialFen')
-                game['SetUp'] = '1'
-                game['White'] = self.json_field(api, 'player/user/username')
-                game['WhiteElo'] = self.json_field(api, 'player/rating')
-                game['Black'] = self.json_field(api, 'opponent/user/username')
-                game['BlackElo'] = self.json_field(api, 'opponent/rating')
-                game['Result'] = '*'
-                game['_moves'] = ''
-                moves = self.json_field(api, 'steps')
-                for move in moves:
-                    if move['ply'] > 0:
-                        game['_moves'] += ' %s' % move['san']
-                return self.rebuild_pgn(game)
+                game['TimeControl'] = '%dd' % (self.json_field(api, 'correspondence/increment') // 86400)
+            game['Result'] = '*'
+            game['_moves'] = ''
+            moves = self.json_field(api, 'steps')
+            for move in moves:
+                if move['ply'] > 0:
+                    game['_moves'] += ' %s' % move['san']
+            return self.rebuild_pgn(game)
 
         # Logic for the studies
         elif self.url_type == TYPE_STUDY:
@@ -1327,6 +1332,8 @@ class InternetGameChessCom(InternetGameInterface):
         if bourne == '':
             return None
         chessgame = self.json_loads(bourne)
+        if not EXTRA and self.json_field(chessgame, 'game/isRated') and not self.json_field(chessgame, 'game/isFinished'):
+            return None
         chessgame = self.json_field(chessgame, 'game')
         if chessgame == '':
             return None
