@@ -31,8 +31,6 @@ if get_cpu()['release'] == 'xp':
 TYPE_NONE, TYPE_GAME, TYPE_STUDY, TYPE_PUZZLE, TYPE_EVENT = range(5)
 CHESS960 = 'Fischerandom'
 DEFAULT_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-DEFAULT_AN = True  # To rebuild a readable PGN
-EXTRA = True
 
 CAT_DL = _('Download link')
 CAT_HTML = _('HTML parsing')
@@ -47,7 +45,9 @@ class InternetGameInterface:
     def __init__(self):
         ''' Initialize the common data that can be used in ALL the sub-classes. '''
         self.id = None
-        self.userAgent = generate_user_agent(fake=EXTRA)
+        self.allow_extra = True
+        self.userAgent = generate_user_agent(fake=self.allow_extra)
+        self.use_an = True  # To rebuild a readable PGN where possible
 
     def is_enabled(self):
         ''' To disable a chess provider temporarily, override this method in the sub-class. '''
@@ -244,13 +244,11 @@ class InternetGameInterface:
             return None
 
         # Reorganize the spaces to bypass Scoutfish's limitation
-        lc = len(pgn)
         while (True):
+            lc = len(pgn)
             pgn = pgn.replace("\n\n\n", "\n\n")
-            lcn = len(pgn)
-            if lcn == lc:
+            if len(pgn) == lc:
                 break
-            lc = lcn
 
         # Extract the first game
         pos = pgn.find("\n\n[")  # TODO Support in-memory database to load several games at once
@@ -362,8 +360,8 @@ class InternetGameLichess(InternetGameInterface):
                 url = 'https://lichess.%s/game/export/%s?literate=1' % (self.url_tld, self.id)
                 return self.download(url)
             else:
-                if not EXTRA and game['rated']:
-                    return None            
+                if not self.allow_extra and game['rated']:
+                    return None
 
             # Rebuild the PGN file
             game = {}
@@ -601,10 +599,6 @@ class InternetGameChesstempo(InternetGameInterface):
 
 # Chess24.com
 class InternetGameChess24(InternetGameInterface):
-    def __init__(self):
-        InternetGameInterface.__init__(self)
-        self.use_an = DEFAULT_AN
-
     def get_description(self):
         return 'Chess24.com -- %s' % CAT_HTML
 
@@ -938,10 +932,6 @@ class InternetGameThechessworld(InternetGameInterface):
 
 # Chess.org
 class InternetGameChessOrg(InternetGameInterface):
-    def __init__(self):
-        InternetGameInterface.__init__(self)
-        self.use_an = DEFAULT_AN
-
     def get_description(self):
         return 'Chess.org -- %s' % CAT_WS
 
@@ -1134,7 +1124,6 @@ class InternetGameGameknot(InternetGameInterface):
     def __init__(self):
         InternetGameInterface.__init__(self)
         self.url_type = TYPE_NONE
-        self.use_an = DEFAULT_AN
 
     def get_description(self):
         return 'GameKnot.com -- %s' % CAT_HTML
@@ -1296,7 +1285,6 @@ class InternetGameChessCom(InternetGameInterface):
     def __init__(self):
         InternetGameInterface.__init__(self)
         self.url_type = None
-        self.use_an = DEFAULT_AN
 
     def get_description(self):
         return 'Chess.com -- %s' % CAT_HTML
@@ -1332,7 +1320,7 @@ class InternetGameChessCom(InternetGameInterface):
         if bourne == '':
             return None
         chessgame = self.json_loads(bourne)
-        if not EXTRA and self.json_field(chessgame, 'game/isRated') and not self.json_field(chessgame, 'game/isFinished'):
+        if not self.allow_extra and self.json_field(chessgame, 'game/isRated') and not self.json_field(chessgame, 'game/isFinished'):
             return None
         chessgame = self.json_field(chessgame, 'game')
         if chessgame == '':
@@ -1682,7 +1670,6 @@ class InternetGameIccf(InternetGameInterface):
 class InternetGameSchacharena(InternetGameInterface):
     def __init__(self):
         InternetGameInterface.__init__(self)
-        self.use_an = DEFAULT_AN
 
     def get_description(self):
         return 'SchachArena.de -- %s' % CAT_HTML
