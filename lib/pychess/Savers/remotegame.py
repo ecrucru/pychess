@@ -1039,16 +1039,22 @@ class InternetGameChessOrg(InternetGameInterface):
         inc = self.json_field(chessgame, 'timeBonusSecs')
         if '' not in [time, inc]:
             game['TimeControl'] = '%s+%s' % (time, inc)
-        resultTable = [(0, '*', 'Game started'),
-                       (1, '1-0', 'White checkmated'),
-                       (2, '0-1', 'Black checkmated'),
-                       (3, '1/2-1/2', 'Stalemate'),
-                       (5, '1/2-1/2', 'Insufficient material'),
-                       (8, '1/2-1/2', 'Mutual agreement'),
-                       (9, '0-1', 'White resigned'),
-                       (10, '1-0', 'Black resigned'),
-                       (13, '1-0', 'White out of time'),
-                       (14, '0-1', 'Black out of time')]  # TODO List to be completed
+        resultTable = [(0, '*', 'Game started'),                 # ALIVE
+                       (1, '1-0', 'White checkmated'),           # WHITE_MATE
+                       (2, '0-1', 'Black checkmated'),           # BLACK_MATE
+                       (3, '1/2-1/2', 'White stalemated'),       # WHITE_STALEMATE
+                       (4, '1/2-1/2', 'Black stalemated'),       # BLACK_STALEMATE
+                       (5, '1/2-1/2', 'Insufficient material'),  # DRAW_NO_MATE
+                       (6, '1/2-1/2', '50-move rule'),           # DRAW_50
+                       (7, '1/2-1/2', 'Threefold repetition'),   # DRAW_REP
+                       (8, '1/2-1/2', 'Mutual agreement'),       # DRAW_AGREE
+                       (9, '0-1', 'White resigned'),             # WHITE_RESIGN
+                       (10, '1-0', 'Black resigned'),            # BLACK_RESIGN
+                       (11, '0-1', 'White canceled'),            # WHITE_CANCEL
+                       (12, '1-0', 'Black canceled'),            # BLACK_CANCEL
+                       (13, '1-0', 'White out of time'),         # WHITE_NO_TIME
+                       (14, '0-1', 'Black out of time'),         # BLACK_NO_TIME
+                       (15, '*', 'Not started')]                 # NOT_STARTED
         state = self.json_field(chessgame, 'state')
         result = '*'
         reason = 'Unknown reason %d' % state
