@@ -84,7 +84,8 @@ class RemoteGameTestCase(unittest.TestCase):
 
     def test365chess(self):
         links = [('https://www.365chess.com/view_game.php?g=4187437#anchor', True),         # Game 1/2-1/2 for special chars
-                 ('https://www.365chess.com/view_game.php?g=1234567890', False)]            # Not a game
+                 ('https://www.365chess.com/view_game.php?g=1234567890', False),            # Not a game
+                 ('https://www.365chess.com/game.php?gid=4230834&p=0', True)]               # Game with additional parameter
         self.executeTest(InternetGame365chess(), links)
 
     def testChesspastebin(self):

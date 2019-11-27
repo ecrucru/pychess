@@ -704,13 +704,20 @@ class InternetGame365chess(InternetGameInterface):
     def assign_game(self, url):
         # Verify the URL
         parsed = urlparse(url)
-        if parsed.netloc.lower() not in ['www.365chess.com', '365chess.com'] or 'view_game' not in parsed.path.lower():
+        if parsed.netloc.lower() not in ['www.365chess.com', '365chess.com']:
+            return False
+        ppl = parsed.path.lower()
+        if ppl == '/game.php':
+            key = 'gid'
+        elif ppl == '/view_game.php':
+            key = 'g'
+        else:
             return False
 
         # Read the arguments
         args = parse_qs(parsed.query)
-        if 'g' in args:
-            gid = args['g'][0]
+        if key in args:
+            gid = args[key][0]
             if gid.isdigit() and gid != '0':
                 self.id = gid
                 return True
@@ -720,7 +727,7 @@ class InternetGame365chess(InternetGameInterface):
         # Download
         if self.id is None:
             return None
-        url = 'https://www.365chess.com/view_game.php?g=%s' % self.id
+        url = 'https://www.365chess.com/game.php?gid=%s' % self.id
         page = self.download(url)
         if page is None:
             return None
@@ -2121,6 +2128,7 @@ chess_providers = [InternetGameLichess(),
                    InternetGameChessdb(),
                    InternetGameChesspro(),
                    InternetGameFicgs(),
+                   # TODO ChessDuo.com
                    InternetGameGeneric()]
 
 
