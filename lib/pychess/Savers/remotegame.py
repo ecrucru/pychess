@@ -20,8 +20,6 @@ from pychess.System.Log import log
 from pychess.System.useragent import generate_user_agent
 
 # import pdb
-# def _(p):
-#     return p
 
 if get_cpu()['release'] == 'xp':
     log.debug('Activating the unsecure SSL context for the old Windows XP')
@@ -48,6 +46,7 @@ class InternetGameInterface:
         self.allow_extra = True
         self.userAgent = generate_user_agent(fake=self.allow_extra)
         self.use_an = True  # To rebuild a readable PGN where possible
+        self.allow_octet_stream = False
 
     def is_enabled(self):
         ''' To disable a chess provider temporarily, override this method in the sub-class. '''
@@ -59,14 +58,15 @@ class InternetGameInterface:
         return self.id
 
     def reacts_to(self, url, host):
-        ''' Return True if the URL belongs to the HOST. The sub-domains other than "www" are not supported.
+        ''' Return True if the URL belongs to the HOST (possibly equal to *). The sub-domains other than "www" are not supported.
             The method is used to accept any URL when a unique identifier cannot be extracted by assign_game(). '''
         # Verify the hostname
         if url is None:
             return False
-        parsed = urlparse(url)
-        if parsed.netloc.lower() not in ['www.' + host.lower(), host.lower()]:
-            return False
+        if host != '*':
+            parsed = urlparse(url)
+            if parsed.netloc.lower() not in ['www.' + host.lower(), host.lower()]:
+                return False
 
         # Any page is valid
         self.id = url
@@ -130,6 +130,19 @@ class InternetGameInterface:
             return None
         else:
             return data
+
+    def expand_links(self, links, url):
+        ''' Convert relative paths into full paths '''
+        base = urlparse(url)
+        for i, link in enumerate(links):
+            e = urlparse(link)
+            if e.netloc == '':
+                if e.path.startswith('/'):
+                    link = '%s://%s%s' % (base.scheme, base.netloc, e.path)
+                else:
+                    link = '%s://%s%s/%s' % (base.scheme, base.netloc, '/'.join(base.path.split('/')[:-1]), e.path)
+            links[i] = link
+        return list(dict.fromkeys(links))       # Without duplicate entries
 
     def download(self, url, userAgent=False):
         ''' Download the URL from the Internet.
@@ -2051,12 +2064,63 @@ class InternetGameFicgs(InternetGameInterface):
         return self.download('http://www.ficgs.com/game_%s.pgn' % self.id)
 
 
+# Chessbase
+class InternetChessbase(InternetGameInterface):
+    def get_description(self):
+        return 'ChessBase.com -- %s' % CAT_HTML
+
+    def assign_game(self, url):
+        return self.reacts_to(url, '*')             # Any website can embed a widget from Chessbase
+
+    def download_game(self):
+        # Download
+        if self.id is None:
+            return None
+        page = self.download(self.id)
+        if page is None:
+            return None
+
+        # Definition of the parser
+        class chessbaseparser(HTMLParser):
+            def __init__(self):
+                HTMLParser.__init__(self)
+                self.tag_ok = False
+                self.links = []
+                self.pgn = None
+
+            def handle_starttag(self, tag, attrs):
+                # Verify the parent tag
+                self.tag_ok = False
+                if tag.lower() in ['p', 'div']:
+                    for k, v in attrs:
+                        if k.lower() == 'class' and v == 'cbreplay':
+                            self.tag_ok = True
+
+                    # Content by link
+                    if self.tag_ok:
+                        for k, v in attrs:
+                            if k.lower() == 'data-url':
+                                self.links.append(v)
+
+            def handle_data(self, data):
+                # Content by data
+                if self.tag_ok and self.pgn is None:
+                    data = data.strip()
+                    if len(data) > 0:       # Empty content if data-url used
+                        self.pgn = data
+
+        # Parse the page
+        parser = chessbaseparser()
+        parser.feed(page)
+        if parser.pgn is not None:
+            return parser.pgn
+        else:
+            parser.links = self.expand_links(parser.links, self.id)
+            return self.download_list(parser.links)
+
+
 # Generic
 class InternetGameGeneric(InternetGameInterface):
-    def __init__(self):
-        InternetGameInterface.__init__(self)
-        self.allow_octet_stream = False
-
     def get_description(self):
         return 'Generic -- %s' % CAT_MISC
 
@@ -2102,18 +2166,7 @@ class InternetGameGeneric(InternetGameInterface):
             # Read the links
             parser = linksParser()
             parser.feed(data)
-
-            # Rebuild a full path
-            base = urlparse(self.id)
-            for i, link in enumerate(parser.links):
-                e = urlparse(link)
-                if e.netloc == '':
-                    url = '%s://%s/%s' % (base.scheme, base.netloc, e.path)
-                else:
-                    url = link
-                parser.links[i] = url
-
-            # Collect the games
+            parser.links = self.expand_links(parser.links, self.id)
             return self.download_list(parser.links)
         return None
 
@@ -2144,6 +2197,7 @@ chess_providers = [InternetGameLichess(),
                    InternetGameChessdb(),
                    InternetGameChesspro(),
                    InternetGameFicgs(),
+                   InternetChessbase(),
                    # TODO ChessDuo.com
                    InternetGameGeneric()]
 

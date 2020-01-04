@@ -1,7 +1,7 @@
 import unittest
 import random
 
-from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameSchacharena, InternetGameChesspuzzle, InternetGameChessking, InternetGameIdeachess, InternetGameChessdb, InternetGameChesspro, InternetGameFicgs, InternetGameGeneric
+from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameSchacharena, InternetGameChesspuzzle, InternetGameChessking, InternetGameIdeachess, InternetGameChessdb, InternetGameChesspro, InternetGameFicgs, InternetChessbase, InternetGameGeneric
 
 
 class RemoteGameTestCase(unittest.TestCase):
@@ -53,7 +53,7 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('https://lichess.org/training/1281301832', False),                                # Not a puzzle (wrong ID)
                  ('https://lichess.org/broadcast/2019-gct-zagreb-round-4/jQ1dbbX9', True),          # Broadcast
                  ('https://lichess.org/broadcast/2019-pychess-round-1/pychess1', False),            # Not a broadcast (wrong ID)
-                 ('https://lichess.ORG/practice/basic-tactics/the-pin/9ogFv8Ac/BRmScz9t#hi', True), # Practice
+                 ('https://lichess.ORG/practice/basic-tactics/the-pin/9ogFv8Ac/BRmScz9t#t', True),  # Practice
                  ('https://lichess.org/practice/py/chess/12345678/abcdEFGH', False)]                # Not a practice (wrong ID)
         self.executeTest(InternetGameLichess(), links)
 
@@ -85,7 +85,7 @@ class RemoteGameTestCase(unittest.TestCase):
     def test365chess(self):
         links = [('https://www.365chess.com/view_game.php?g=4187437#anchor', True),         # Game 1/2-1/2 for special chars
                  ('https://www.365chess.com/view_game.php?g=1234567890', False),            # Not a game
-                 ('https://www.365chess.com/game.php?gid=4230834&p=0', True)]               # Game with additional parameter
+                 ('https://www.365chess.com/game.php?gid=4230834&p=0', True)]               # Game with additional parameter
         self.executeTest(InternetGame365chess(), links)
 
     def testChesspastebin(self):
@@ -254,6 +254,13 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('http://www.ficgs.com/view_95671.html', False),                       # Not a game (wrong path)
                  ('http://www.ficgs.com', False)]                                       # Not a game (homepage)
         self.executeTest(InternetGameFicgs(), links)
+
+    def testChessbase(self):
+        links = [('http://live.chessbase.com/watch/5th-EKA-IIFL-Investment-2019', True),                                # Games
+                 ('http://live.chessbase.com/replay/5th-eka-iifl-investment-2019/3?anno=False', True),                  # Games for round 3
+                 ('https://liveserver.chessbase.com:6009/pgn/5th-eka-iifl-investment-2019/all.pgn#fake-tag', False),    # Not a game (direct PGN link)
+                 ('http://live.chessbase.com', False)]                                                                  # Not a game (homepage)
+        self.executeTest(InternetChessbase(), links)
 
     def testGeneric(self):
         links = [('https://thechessworld.com/pgngames/middlegames/sacrifice-on-e6/Ivanchuk-Karjakin.pgn', True)]    # Game with UTF-8 BOM
