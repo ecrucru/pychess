@@ -143,7 +143,8 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('https://www.chess.com/daily/game/225006782', True),                      # Daily game Chess960
                  ('https://www.chess.com/daily/GAME/205389002', True),                      # Daily game Chess960
                  ('https://chess.com/live/game/13029832074287114', False),                  # Not a game (wrong ID)
-                 ('https://www.chess.com', False)]                                          # Not a game (homepage)
+                 ('https://www.chess.com', False),                                          # Not a game (homepage)
+                 ('https://www.chess.com/puzzles/problem/41839', True)]                     # Puzzle
         self.executeTest(InternetGameChessCom(), links)
 
     def testSchachspielen(self):
