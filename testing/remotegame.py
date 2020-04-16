@@ -73,8 +73,9 @@ class RemoteGameTestCase(unittest.TestCase):
 
     def testChesstempo(self):
         links = [('https://chesstempo.com/gamedb/game/2046457', True),                      # Game
-                 ('https://chesstempo.com/gamedb/game/2046457/foo/bar/123', True),          # Game with additional path
+                 ('https://CHESSTEMPO.com/gamedb/game/2046457/foo/bar/123', True),          # Game with additional path
                  ('https://www.chesstempo.com/gamedb/game/2046457?p=0#tag', True),          # Game with additional parameters
+                 ('https://en.chesstempo.com/chess-tactics/71360', True),                   # Puzzle
                  ('http://chesstempo.com/faq.html', False)]                                 # Not a game
         self.executeTest(InternetGameChesstempo(), links)
 

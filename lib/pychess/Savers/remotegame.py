@@ -302,7 +302,7 @@ class InternetGameLichess(InternetGameInterface):
 
     def assign_game(self, url):
         # Retrieve the ID of the broadcast
-        rxp = re.compile(r'^https?:\/\/([\S]+\.)?lichess\.(org|dev)\/broadcast\/[a-z0-9\-]+\/([a-z0-9]+)[\/\?\#]?', re.IGNORECASE)
+        rxp = re.compile(r'^https?:\/\/(\S+\.)?lichess\.(org|dev)\/broadcast\/[a-z0-9\-]+\/([a-z0-9]+)[\/\?\#]?', re.IGNORECASE)
         m = rxp.match(url)
         if m is not None:
             gid = m.group(3)
@@ -313,7 +313,7 @@ class InternetGameLichess(InternetGameInterface):
                 return True
 
         # Retrieve the ID of the practice
-        rxp = re.compile(r'^https?:\/\/([\S]+\.)?lichess\.(org|dev)\/practice\/[\w\-\/]+\/([a-z0-9]+\/[a-z0-9]+)(\.pgn)?\/?([\S\/]+)?$', re.IGNORECASE)
+        rxp = re.compile(r'^https?:\/\/(\S+\.)?lichess\.(org|dev)\/practice\/[\w\-\/]+\/([a-z0-9]+\/[a-z0-9]+)(\.pgn)?\/?([\S\/]+)?$', re.IGNORECASE)
         m = rxp.match(url)
         if m is not None:
             gid = m.group(3)
@@ -324,7 +324,7 @@ class InternetGameLichess(InternetGameInterface):
                 return True
 
         # Retrieve the ID of the study
-        rxp = re.compile(r'^https?:\/\/([\S]+\.)?lichess\.(org|dev)\/study\/([a-z0-9]+(\/[a-z0-9]+)?)(\.pgn)?\/?([\S\/]+)?$', re.IGNORECASE)
+        rxp = re.compile(r'^https?:\/\/(\S+\.)?lichess\.(org|dev)\/study\/([a-z0-9]+(\/[a-z0-9]+)?)(\.pgn)?\/?([\S\/]+)?$', re.IGNORECASE)
         m = rxp.match(url)
         if m is not None:
             gid = m.group(3)
@@ -335,7 +335,7 @@ class InternetGameLichess(InternetGameInterface):
                 return True
 
         # Retrieve the ID of the puzzle
-        rxp = re.compile(r'^https?:\/\/([\S]+\.)?lichess\.(org|dev)\/training\/([0-9]+|daily)[\/\?\#]?', re.IGNORECASE)
+        rxp = re.compile(r'^https?:\/\/(\S+\.)?lichess\.(org|dev)\/training\/([0-9]+|daily)[\/\?\#]?', re.IGNORECASE)
         m = rxp.match(url)
         if m is not None:
             gid = m.group(3)
@@ -346,7 +346,7 @@ class InternetGameLichess(InternetGameInterface):
                 return True
 
         # Retrieve the ID of the game
-        rxp = re.compile(r'^https?:\/\/([\S]+\.)?lichess\.(org|dev)\/(game\/export\/|embed\/)?([a-z0-9]+)\/?([\S\/]+)?$', re.IGNORECASE)  # More permissive
+        rxp = re.compile(r'^https?:\/\/(\S+\.)?lichess\.(org|dev)\/(game\/export\/|embed\/)?([a-z0-9]+)\/?([\S\/]+)?$', re.IGNORECASE)  # More permissive
         m = rxp.match(url)
         if m is not None:
             gid = m.group(4)
@@ -589,30 +589,98 @@ class InternetGameFicsgames(InternetGameInterface):
 
 # ChessTempo.com
 class InternetGameChesstempo(InternetGameInterface):
+    def __init__(self):
+        InternetGameInterface.__init__(self)
+        self.url_type = None
+
     def get_description(self):
-        return 'ChessTempo.com -- %s' % CAT_DL
+        return 'ChessTempo.com -- %s' % CAT_WS
 
     def assign_game(self, url):
-        rxp = re.compile(r'^https?:\/\/(\S+\.)?chesstempo\.com\/gamedb\/game\/(\d+)\/?([\S\/]+)?$', re.IGNORECASE)
+        # Puzzles
+        rxp = re.compile(r'^https?:\/\/(\S+\.)?chesstempo\.com\/chess-tactics\/(\d+)', re.IGNORECASE)
         m = rxp.match(url)
         if m is not None:
             gid = str(m.group(2))
             if gid.isdigit() and gid != '0':
                 self.id = gid
+                self.url_type = TYPE_PUZZLE
+                return True
+
+        # Games
+        rxp = re.compile(r'^https?:\/\/(\S+\.)?chesstempo\.com\/gamedb\/game\/(\d+)', re.IGNORECASE)
+        m = rxp.match(url)
+        if m is not None:
+            gid = str(m.group(2))
+            if gid.isdigit() and gid != '0':
+                self.id = gid
+                self.url_type = TYPE_GAME
                 return True
         return False
 
     def download_game(self):
         # Check
-        if self.id is None:
+        if None in [self.id, self.url_type]:
             return None
 
-        # Download
-        pgn = self.download('http://chesstempo.com/requests/download_game_pgn.php?gameids=%s' % self.id, userAgent=True)  # Else a random game is retrieved
-        if pgn is None or len(pgn) <= 128:
-            return None
-        else:
-            return pgn
+        # Games
+        if self.url_type == TYPE_GAME:
+            pgn = self.download('http://chesstempo.com/requests/download_game_pgn.php?gameids=%s' % self.id, userAgent=True)  # Else a random game is retrieved
+            if pgn is None or len(pgn) <= 128:
+                return None
+            else:
+                return pgn
+
+        # Puzzles
+        elif self.url_type == TYPE_PUZZLE:
+
+            # Open a websocket to retrieve the puzzle
+            @asyncio.coroutine
+            def coro():
+                result = None
+                ws = yield from websockets.connect('wss://chesstempo.com:443/ws', origin="https://chesstempo.com")  # TODO , extra_headers=[('User-agent', self.userAgent)]
+                try:
+                    # Check the welcome message
+                    data = yield from ws.recv()
+                    data = self.json_loads(data)
+                    if (data['eventName'] == 'connectionStarted') and (data['data'] == 'started'):
+
+                        # Call the puzzle
+                        yield from ws.send('{"eventName":"get-problem-session-data","data":{"problemSetId":1,"sessionSize":20}}')
+                        yield from ws.send('{"eventName":"set-problem-difficulty","data":{"difficulty":"","problemSetId":1}}')
+                        yield from ws.send('{"eventName":"get-tactic","data":{"problemId":%s,"vo":false}}' % self.id)
+
+                        for i in range(3):
+                            data = yield from ws.recv()
+                            data = self.json_loads(data)
+                            if data['eventName'] == 'get-tactic-result':
+                                if data['enc']:
+                                    data = ''.join(map(lambda v: v if v < '0' or v > '9' else str((9 + int(v)) % 10), list(data['data'])))
+                                    result = b64decode(data).decode().strip()
+                                else:
+                                    result = data['data'].strip()
+                finally:
+                    yield from ws.close()
+                return result
+
+            data = self.async_from_sync(coro())
+            if data in [None, '']:
+                return None
+
+            # Rebuild the puzzle
+            puzzle = self.json_loads(data)
+            game = {}
+            game['_url'] = 'https://chesstempo.com/chess-tactics/%s' % self.id
+            game['Event'] = 'Puzzle %s' % self.json_field(puzzle, 'tacticInfo/problem_id')
+            game['White'] = _('White')
+            game['Black'] = _('Black')
+            game['Result'] = '*'
+            game['FEN'] = self.json_field(puzzle, 'tacticInfo/startPosition')
+            game['SetUp'] = '1'
+            game['_moves'] = '{%s} %s' % (self.json_field(puzzle, 'tacticInfo/prevmove'), self.json_field(puzzle, 'tacticInfo/moves'))
+            return self.rebuild_pgn(game)
+
+        return None
 
 
 # Chess24.com
@@ -1333,7 +1401,7 @@ class InternetGameChessCom(InternetGameInterface):
 
     def assign_game(self, url):
         # Puzzles
-        rxp = re.compile(r'^https?:\/\/([\S]+\.)?chess\.com\/([a-z\/]+)?(puzzles)\/problem\/([0-9]+)[\/\?\#]?', re.IGNORECASE)
+        rxp = re.compile(r'^https?:\/\/(\S+\.)?chess\.com\/([a-z\/]+)?(puzzles)\/problem\/([0-9]+)[\/\?\#]?', re.IGNORECASE)
         m = rxp.match(url)
         if m is not None:
             self.url_type = m.group(3)
@@ -1341,7 +1409,7 @@ class InternetGameChessCom(InternetGameInterface):
             return True
 
         # Games
-        rxp = re.compile(r'^https?:\/\/([\S]+\.)?chess\.com\/([a-z\/]+)?(live|daily)\/([a-z\/]+)?([0-9]+)[\/\?\#]?', re.IGNORECASE)
+        rxp = re.compile(r'^https?:\/\/(\S+\.)?chess\.com\/([a-z\/]+)?(live|daily)\/([a-z\/]+)?([0-9]+)[\/\?\#]?', re.IGNORECASE)
         m = rxp.match(url)
         if m is not None:
             self.url_type = m.group(3)
