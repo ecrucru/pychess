@@ -6,7 +6,7 @@ from pychess.Utils.const import ASEAN_VARIANTS, ASEAN_BBISHOP, ASEAN_WBISHOP, AS
 
 #
 # Caveat: Many functions in this module has very similar code. If you fix a
-# bug, or write a perforance enchace, please update all functions. Apologies
+# bug, or write a performance enhance, please update all functions. Apologies
 # for the inconvenience
 #
 
@@ -80,7 +80,9 @@ def isAttacked(board, cord, color, ischecked=False):
 
 
 def getAttacks(board, cord, color):
-    """ To create a bitboard of pieces of color, which attacks cord """
+    """ To create a bitboard of pieces of color, which attacks cord
+    The type of args are LBoard, ,BLACK or WHITE from const file
+    """
 
     _moveArray = moveArray
     pieces = board.boards[color]
@@ -91,7 +93,7 @@ def getAttacks(board, cord, color):
     # Kings
     bits |= pieces[KING] & _moveArray[KING][cord]
 
-    # Pawns
+    # Pawns, to test , bug possible with BPAWN
     bits |= pieces[PAWN] & _moveArray[color == WHITE and BPAWN or PAWN][cord]
 
     rayto = fromToRay[cord]
@@ -107,6 +109,7 @@ def getAttacks(board, cord, color):
     else:
         bitboard = (pieces[BISHOP] | pieces[QUEEN]) & _moveArray[BISHOP][cord]
         # inlined iterBits()
+        # check whether or not there is a piece blocking the path in diagonal
         while bitboard:
             bit = bitboard & -bitboard
             c = lsb[bit]
@@ -121,6 +124,8 @@ def getAttacks(board, cord, color):
     else:
         bitboard = (pieces[ROOK] | pieces[QUEEN]) & _moveArray[ROOK][cord]
     # inlined iterBits()
+
+    # check whether or not there is a piece blocking the path in straight line
     while bitboard:
         bit = bitboard & -bitboard
         c = lsb[bit]

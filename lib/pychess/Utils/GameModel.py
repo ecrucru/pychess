@@ -664,7 +664,8 @@ class GameModel(GObject.GObject):
         else:
             fileobj = uri
             self.uri = None
-        saver.save(fileobj, self, position, flip)
+        with fileobj:
+            saver.save(fileobj, self, position, flip)
         self.needsSave = False
         self.emit("game_saved", uri)
 
@@ -737,6 +738,7 @@ class GameModel(GObject.GObject):
 
             while self.status in (PAUSED, RUNNING, DRAW, WHITEWON, BLACKWON):
                 curPlayer = self.players[self.curColor]
+
                 if self.timed:
                     log.debug("GameModel.run: id=%s, players=%s, self.ply=%s: updating %s's time" % (
                         id(self), str(self.players), str(self.ply), str(curPlayer)))
@@ -748,13 +750,16 @@ class GameModel(GObject.GObject):
                         id(self), str(self.players), self.ply, str(curPlayer)))
 
                     move = None
+                    # if the current player is a bot
                     if curPlayer.__type__ == ARTIFICIAL and book_depth_max > 0 and self.ply <= book_depth_max:
                         move = self.get_book_move()
                         log.debug("GameModel.run: id=%s, players=%s, self.ply=%s: got move=%s from book" % (
                             id(self), str(self.players), self.ply, move))
                         if move is not None:
                             curPlayer.set_board(self.boards[-1].move(move))
+                    # if the current player is not a bot
                     if move is None:
+
                         if self.ply > self.lowply:
                             move = yield from curPlayer.makeMove(self.boards[-1], self.moves[-1], self.boards[-2])
                         else:

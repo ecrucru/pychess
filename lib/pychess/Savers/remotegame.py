@@ -955,7 +955,7 @@ class InternetGameThechessworld(InternetGameInterface):
                 return None
 
             # Finds the games
-            rxp = re.compile(".*pgn_uri:.*'([^']+)'.*", re.IGNORECASE)
+            rxp = re.compile(r".*pgn_uri:.*'([^']+)'.*", re.IGNORECASE)
             lines = data.split("\n")
             for line in lines:
                 m = rxp.match(line)
@@ -1150,7 +1150,7 @@ class InternetGameEuropeechecs(InternetGameInterface):
                 return None
 
             # Find the chess widgets
-            rxp = re.compile(".*class=\"cbwidget\"\s+id=\"([0-9a-f]+)_container\".*", re.IGNORECASE)
+            rxp = re.compile(r".*class=\"cbwidget\"\s+id=\"([0-9a-f]+)_container\".*", re.IGNORECASE)
             lines = page.split("\n")
             for line in lines:
                 m = rxp.match(line)
