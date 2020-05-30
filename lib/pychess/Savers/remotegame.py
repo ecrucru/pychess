@@ -26,7 +26,7 @@ if get_cpu()['release'] == 'xp':
     import ssl
     ssl._create_default_https_context = ssl._create_unverified_context  # Chess24, ICCF
 
-TYPE_NONE, TYPE_GAME, TYPE_STUDY, TYPE_PUZZLE, TYPE_EVENT = range(5)
+TYPE_NONE, TYPE_GAME, TYPE_STUDY, TYPE_PUZZLE, TYPE_EVENT, TYPE_FEN = range(6)
 CHESS960 = 'Fischerandom'
 DEFAULT_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
@@ -272,9 +272,17 @@ class InternetGameInterface:
         return pgn.replace("\n", os.linesep)
 
     def stripHtml(self, input):
-        ''' This method removes any HTML mark from the input parameter '''
+        ''' Remove any HTML mark from the input parameter '''
         rxp = re.compile(r'<\/?[^<]+>', re.IGNORECASE)
         return rxp.sub('', input)
+
+    def isFen(self, fen):
+        ''' Test if the argument is a FEN position '''
+        try:
+            rxp = re.compile(r'^[kqbnrp1-8\/]+\s[w|b]\s[kq-]+\s[a-h-][1-8]?(\s[0-9]+)?(\s[0-9]+)?$', re.IGNORECASE)
+            return rxp.match(fen) is not None
+        except TypeError:
+            return False
 
     # External
     def get_description(self):
@@ -1400,6 +1408,17 @@ class InternetGameChessCom(InternetGameInterface):
         return 'Chess.com -- %s' % CAT_HTML
 
     def assign_game(self, url):
+        # Positions
+        parsed = urlparse(url)
+        if parsed.netloc.lower() in ['www.chess.com', 'chess.com']:
+            args = parse_qs(parsed.query)
+            if 'fen' in args:
+                fen = args['fen'][0]
+                if self.isFen(fen):
+                    self.url_type = TYPE_FEN
+                    self.id = fen
+                    return True
+
         # Puzzles
         rxp = re.compile(r'^https?:\/\/(\S+\.)?chess\.com\/([a-z\/]+)?(puzzles)\/problem\/([0-9]+)[\/\?\#]?', re.IGNORECASE)
         m = rxp.match(url)
@@ -1441,8 +1460,12 @@ class InternetGameChessCom(InternetGameInterface):
         if None in [self.id, self.url_type]:
             return None
 
+        # Positions
+        if self.url_type == TYPE_FEN:
+            return '[Site "chess.com"]\n[White "%s"]\n[Black "%s"]\n[SetUp "1"]\n[FEN "%s"]\n\n*' % (_('White'), _('Black'), self.id)
+
         # Puzzles
-        if self.url_type == 'puzzles':
+        elif self.url_type == 'puzzles':
             url = 'https://www.chess.com/puzzles/problem/%s' % self.id
             page = self.download(url, userAgent=True)  # Else 403 Forbidden
             if page is None:
@@ -2375,8 +2398,9 @@ def get_internet_game_as_pgn(url):
             try:
                 pgn = prov.download_game()
                 pgn = prov.sanitize(pgn)
-            except Exception:
+            except Exception as e:
                 pgn = None
+                log.debug(str(e))
 
             # Check
             if pgn is None:

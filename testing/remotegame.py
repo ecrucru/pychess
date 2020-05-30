@@ -145,7 +145,9 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('https://www.chess.com/daily/GAME/205389002', True),                      # Daily game Chess960
                  ('https://chess.com/live/game/13029832074287114', False),                  # Not a game (wrong ID)
                  ('https://www.chess.com', False),                                          # Not a game (homepage)
-                 ('https://www.chess.com/puzzles/problem/41839', True)]                     # Puzzle
+                 ('https://www.chess.com/puzzles/problem/41839', True),                     # Puzzle
+                 ('https://www.chess.com/analysis?fen=invalidfen', False),                  # Position to analyze (no FEN)
+                 ('https://www.chess.com/analysis?fen=r1b1k3%2F2p2pr1%2F1pp4p%2F8%2F2p5%2F2N5%2FPPP2PPP%2F3RR1K1+b+-+-+3+17&flip=false', True)]
         self.executeTest(InternetGameChessCom(), links)
 
     def testSchachspielen(self):
