@@ -2130,6 +2130,9 @@ class InternetGameChessdb(InternetGameInterface):
     def get_description(self):
         return 'Chess-DB.com -- %s' % CAT_HTML
 
+    def is_enabled(self):
+        return False  # Server down
+
     def assign_game(self, url):
         # Verify the URL
         parsed = urlparse(url)
