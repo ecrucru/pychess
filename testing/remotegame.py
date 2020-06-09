@@ -1,7 +1,7 @@
 import unittest
 import random
 
-from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameSchacharena, InternetGameChesspuzzle, InternetGameChessking, InternetGameIdeachess, InternetGameChessdb, InternetGameChesspro, InternetGameFicgs, InternetChessbase, InternetGameGeneric
+from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameSchacharena, InternetGameChesspuzzle, InternetGameChessking, InternetGameIdeachess, InternetGameChessdb, InternetGameChesspro, InternetGameFicgs, InternetChessbase, InternetGamePlayok, InternetGameGeneric
 
 
 class RemoteGameTestCase(unittest.TestCase):
@@ -265,6 +265,13 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('https://liveserver.chessbase.com:6009/pgn/5th-eka-iifl-investment-2019/all.pgn#fake-tag', False),    # Not a game (direct PGN link)
                  ('http://live.chessbase.com', False)]                                                                  # Not a game (homepage)
         self.executeTest(InternetChessbase(), links)
+
+    def testPlayok(self):
+        links = [('http://www.playok.com/p/?g=ch484680868', True),          # Game
+                 ('https://PLAYOK.com/p/?g=ch484680868.txt', True),         # Game (direct link)
+                 ('https://PLAYOK.com/p/?g=ch999999999#tag', False),        # Game (wrong ID)
+                 ('http://www.playok.com', False)]                          # Not a game (homepage)
+        self.executeTest(testPlayok(), links)
 
     def testGeneric(self):
         links = [('https://thechessworld.com/pgngames/middlegames/sacrifice-on-e6/Ivanchuk-Karjakin.pgn', True)]    # Game with UTF-8 BOM
