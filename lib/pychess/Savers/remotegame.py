@@ -252,7 +252,7 @@ class InternetGameInterface:
             return None
 
         # Verify that it starts with the correct magic character (ex.: "<" denotes an HTML content, "[" a chess game, etc...)
-        pgn = pgn.strip()
+        pgn = pgn.replace('\r', '').strip()
         if not pgn.startswith('['):
             return None
 
@@ -267,6 +267,9 @@ class InternetGameInterface:
         pos = pgn.find("\n\n[")  # TODO Support in-memory database to load several games at once
         if pos != -1:
             pgn = pgn[:pos]
+
+        # Variants
+        pgn = pgn.replace('[Variant "Chess"]\n', '')
 
         # Return the PGN with the local crlf
         return pgn.replace("\n", os.linesep)
@@ -646,7 +649,7 @@ class InternetGameChesstempo(InternetGameInterface):
             @asyncio.coroutine
             def coro():
                 result = None
-                ws = yield from websockets.connect('wss://chesstempo.com:443/ws', origin="https://chesstempo.com")  # TODO , extra_headers=[('User-agent', self.userAgent)]
+                ws = yield from websockets.connect('wss://chesstempo.com:443/ws', origin="https://chesstempo.com", ping_interval=None)  # TODO , extra_headers=[('User-agent', self.userAgent)]
                 try:
                     # Check the welcome message
                     data = yield from ws.recv()
@@ -1089,7 +1092,7 @@ class InternetGameChessOrg(InternetGameInterface):
         def coro():
             url = 'wss://chess.org:443/play-sockjs/%d/%s/websocket' % (rndI, rndS)
             log.debug('Websocket connecting to %s' % url)
-            ws = yield from websockets.connect(url, origin="https://chess.org:443")
+            ws = yield from websockets.connect(url, origin="https://chess.org:443", ping_interval=None)
             try:
                 # Server: Hello
                 data = yield from ws.recv()
@@ -2237,7 +2240,7 @@ class InternetGameFicgs(InternetGameInterface):
 
 
 # Chessbase
-class InternetChessbase(InternetGameInterface):
+class InternetGameChessbase(InternetGameInterface):
     def get_description(self):
         return 'ChessBase.com -- %s' % CAT_HTML
 
@@ -2321,6 +2324,50 @@ class InternetGamePlayok(InternetGameInterface):
         return None
 
 
+# Pychess.org
+class InternetGamePychess(InternetGameInterface):
+    def get_description(self):
+        return 'Pychess.org -- %s' % CAT_WS
+
+    def assign_game(self, url):
+        # Retrieve the ID of the game
+        rxp = re.compile(r'https?:\/\/(www\.)?pychess(-variants\.herokuapp\.com|\.org)\/([a-z0-9]+)[\/\?\#]?', re.IGNORECASE)
+        m = rxp.match(url)
+        if m is not None:
+            gid = m.group(3)
+            if len(gid) == 8:
+                self.id = gid
+                return True
+
+        # Nothing found
+        return False
+
+    def download_game(self):
+        # Check
+        if self.id is None:
+            return None
+
+        # Open a websocket to retrieve the game
+        @asyncio.coroutine
+        def coro():
+            result = None
+            ws = yield from websockets.connect('wss://www.pychess.org/wsr', origin="https://www.pychess.org", ping_interval=None)
+            try:
+                yield from ws.send('{"type":"board","gameId":"%s"}' % self.id)
+                for i in range(5):
+                    data = yield from ws.recv()
+                    data = self.json_loads(data)
+                    if data['type'] == 'board' and data['gameId'] == self.id:
+                        result = data['pgn']
+                        break
+            finally:
+                yield from ws.close()
+            return result
+
+        data = self.async_from_sync(coro())
+        return None if data == '' else data
+
+
 # Generic
 class InternetGameGeneric(InternetGameInterface):
     def get_description(self):
@@ -2399,8 +2446,9 @@ chess_providers = [InternetGameLichess(),
                    InternetGameChessdb(),
                    InternetGameChesspro(),
                    InternetGameFicgs(),
-                   InternetChessbase(),
+                   InternetGameChessbase(),
                    InternetGamePlayok(),
+                   InternetGamePychess(),
                    # TODO ChessDuo.com
                    InternetGameGeneric()]
 

@@ -1,7 +1,7 @@
 import unittest
 import random
 
-from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameSchacharena, InternetGameChesspuzzle, InternetGameChessking, InternetGameIdeachess, InternetGameChessdb, InternetGameChesspro, InternetGameFicgs, InternetChessbase, InternetGamePlayok, InternetGameGeneric
+from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameSchacharena, InternetGameChesspuzzle, InternetGameChessking, InternetGameIdeachess, InternetGameChessdb, InternetGameChesspro, InternetGameFicgs, InternetGameChessbase, InternetGamePlayok, InternetGamePychess, InternetGameGeneric
 
 
 class RemoteGameTestCase(unittest.TestCase):
@@ -264,14 +264,26 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('http://live.chessbase.com/replay/5th-eka-iifl-investment-2019/3?anno=False', True),                  # Games for round 3
                  ('https://liveserver.chessbase.com:6009/pgn/5th-eka-iifl-investment-2019/all.pgn#fake-tag', False),    # Not a game (direct PGN link)
                  ('http://live.chessbase.com', False)]                                                                  # Not a game (homepage)
-        self.executeTest(InternetChessbase(), links)
+        self.executeTest(InternetGameChessbase(), links)
 
     def testPlayok(self):
         links = [('http://www.playok.com/p/?g=ch484680868', True),          # Game
                  ('https://PLAYOK.com/p/?g=ch484680868.txt', True),         # Game (direct link)
                  ('https://PLAYOK.com/p/?g=ch999999999#tag', False),        # Game (wrong ID)
                  ('http://www.playok.com', False)]                          # Not a game (homepage)
-        self.executeTest(testPlayok(), links)
+        self.executeTest(InternetGamePlayok(), links)
+
+    def testPychess(self):
+        links = [('http://pychess.org/DGN5Ps2k#tag', True),                 # Crazyhouse
+                 ('http://pychess-variants.herokuapp.com/uWbgRNfw', True),  # Chess
+                 ('http://PYCHESS.org/4XTiOuKB', True),                     # Chess960
+                 ('http://pychess.ORG/b8aZwvoJ', True),                     # Placement
+                 ('https://pychess.org/drtDbEhd#tag', False),               # Shogi (unsupported)
+                 ('https://pychess.ORG/tALxtipo', True),                    # Makruk
+                 ('https://pychess.org/2CKjayxv?param', True),              # Cambodian
+                 ('https://PYCHESS.ORG/4x0kQ8kY', True),                    # Sittuyin
+                 ('http://pychess.org', False)]                             # Not a game (homepage)
+        self.executeTest(InternetGamePychess(), links)
 
     def testGeneric(self):
         links = [('https://thechessworld.com/pgngames/middlegames/sacrifice-on-e6/Ivanchuk-Karjakin.pgn', True)]    # Game with UTF-8 BOM
