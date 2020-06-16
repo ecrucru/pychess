@@ -649,7 +649,7 @@ class InternetGameChesstempo(InternetGameInterface):
             @asyncio.coroutine
             def coro():
                 result = None
-                ws = yield from websockets.connect('wss://chesstempo.com:443/ws', origin="https://chesstempo.com", ping_interval=None)  # TODO , extra_headers=[('User-agent', self.userAgent)]
+                ws = yield from websockets.connect('wss://chesstempo.com:443/ws', origin="https://chesstempo.com", extra_headers=[('User-agent', self.userAgent)], ping_interval=None)
                 try:
                     # Check the welcome message
                     data = yield from ws.recv()
