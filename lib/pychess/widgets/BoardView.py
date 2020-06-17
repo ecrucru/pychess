@@ -23,6 +23,7 @@ from pychess.Variants.blindfold import BlindfoldBoard, HiddenPawnsBoard, \
     HiddenPiecesBoard, AllWhiteBoard
 from . import preferencesDialog
 from pychess.perspectives import perspective_manager
+from pychess.widgets.preferencesDialog import board_items
 
 # This file contains the class that is used to draw the board
 
@@ -308,29 +309,34 @@ class BoardView(Gtk.DrawingArea):
 
         self.emit("shownChanged", self.shown)
 
-    def gameChanged(self, model, ply):
+    def playSound(self):
         # Play sounds
         if self.model.players and self.model.status != WAITING_TO_START:
-            move = model.moves[-1]
-            if move.is_capture(model.boards[-2]):
+            boardA = self.model.getBoardAtPly(self.shown - 1, self.shown_variation_idx)
+            boardB = self.model.getBoardAtPly(self.shown, self.shown_variation_idx)
+            move = self.model.getMoveAtPly(self.shown - 1, self.shown_variation_idx)
+            # move = self.model.moves[-1]
+            if move.is_capture(boardA):
                 sound = "aPlayerCaptures"
             else:
                 sound = "aPlayerMoves"
 
-            if model.boards[-1].board.isChecked():
+            if boardB.board.isChecked():
                 sound = "aPlayerChecks"
 
-            if model.players[0].__type__ == REMOTE and \
-                    model.players[1].__type__ == REMOTE:
+            if self.model.players[0].__type__ == REMOTE and \
+                    self.model.players[1].__type__ == REMOTE:
                 sound = "observedMoves"
 
             preferencesDialog.SoundTab.playAction(sound)
 
+    def gameChanged(self, model, ply):
         # Auto updating self.shown can be disabled. Useful for loading games.
         # If we are not at the latest game we are probably browsing the history,
         # and we won't like auto updating.
         if self.auto_update_shown and self.shown + 1 >= ply and self.shownIsMainLine():
             self.shown = ply
+            self.playSound()
 
             # Rotate board
             if self.autoRotate:
@@ -445,7 +451,8 @@ class BoardView(Gtk.DrawingArea):
         """
         board_style = conf.get("board_style")
         self.colors_only = board_style == 0
-        if not self.colors_only:
+        self.transparent = board_style == len(board_items) - 1
+        if (not self.colors_only) and (not self.transparent):
             # create dark and light square surfaces
             board_style_name = preferencesDialog.board_items[board_style][1]
             if self.board_style_name is None or self.board_style_name != board_style_name:
@@ -460,7 +467,8 @@ class BoardView(Gtk.DrawingArea):
     def onBoardFrame(self, *args):
         board_frame = conf.get("board_frame")
         self.no_frame = board_frame == 0
-        if not self.no_frame:
+        self.transparent = board_frame == len(board_items) - 1
+        if (not self.no_frame) and (not self.transparent):
             # create board frame surface
             board_frame_name = preferencesDialog.board_items[board_frame][1]
             if self.board_frame_name is None or self.board_frame_name != board_frame_name:
@@ -1061,23 +1069,27 @@ class BoardView(Gtk.DrawingArea):
 
         if self.model.variant.variant in ASEAN_VARIANTS:
             # just fill the whole board with light color
-            if self.colors_only:
+            if self.colors_only or self.transparent:
                 context.rectangle(xc_loc, yc_loc, side * self.FILES, side * self.RANKS)
             else:
                 self.draw_image(context, self.light_surface, xc_loc, yc_loc, side * self.FILES, side * self.RANKS)
-            if self.colors_only:
+            if self.transparent:
+                pass
+            elif self.colors_only:
                 context.fill()
         else:
             # light squares
             for x_loc in range(self.FILES):
                 for y_loc in range(self.RANKS):
                     if x_loc % 2 + y_loc % 2 != 1:
-                        if self.colors_only:
+                        if self.colors_only or self.transparent:
                             context.rectangle(xc_loc + x_loc * side, yc_loc + y_loc * side, side, side)
                         else:
                             self.draw_image(context, self.light_surface, xc_loc + x_loc * side, yc_loc + y_loc * side,
                                             side, side)
-            if self.colors_only:
+            if self.transparent:
+                pass
+            elif self.colors_only:
                 context.fill()
 
         col = Gdk.RGBA()
@@ -1087,6 +1099,8 @@ class BoardView(Gtk.DrawingArea):
         if self.model.variant.variant in ASEAN_VARIANTS:
             # diagonals
             if self.model.variant.variant == SITTUYINCHESS:
+                context.set_source_rgb(0.0, 0.0, 0.0)
+                context.set_line_width(0.5 if r is None else 1.0)
                 context.move_to(xc_loc, yc_loc)
                 context.rel_line_to(square, square)
                 context.move_to(xc_loc + square, yc_loc)
@@ -1097,15 +1111,17 @@ class BoardView(Gtk.DrawingArea):
             for x_loc in range(self.FILES):
                 for y_loc in range(self.RANKS):
                     if x_loc % 2 + y_loc % 2 == 1:
-                        if self.colors_only:
+                        if self.colors_only or self.transparent:
                             context.rectangle((xc_loc + x_loc * side), (yc_loc + y_loc * side), side, side)
                         else:
                             self.draw_image(context, self.dark_surface, (xc_loc + x_loc * side),
                                             (yc_loc + y_loc * side), side, side)
-            if self.colors_only:
+            if self.transparent:
+                pass
+            elif self.colors_only:
                 context.fill()
 
-        if not self.no_frame:
+        if (not self.no_frame) and (not self.transparent):
             # board frame
             delta = side / 4
             # top
@@ -1931,6 +1947,7 @@ class BoardView(Gtk.DrawingArea):
                     self.shown += step
                 else:
                     self.shown = maxply
+                self.playSound()
 
     def showLast(self):
         if self.model.examined and self.model.noTD:
