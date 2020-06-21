@@ -12,6 +12,7 @@ class RemoteGameTestCase(unittest.TestCase):
         print("\n%s" % cp.get_description())
         if not cp.is_enabled():
             print('- Skipping disabled chess provider')
+            return
 
         # Pick one link only to not overload the remote server
         url, expected = random.choice(links)
