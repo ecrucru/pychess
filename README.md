@@ -8,10 +8,9 @@ PyChess - a free chess client for Linux/Windows
 The mission of PyChess is to create a free, pleasant, [PyGObject](https://pygobject.readthedocs.io/) based chess game for the
 Linux desktop that does everything you require from an advanced chess client.
 
-- Project homepage: https://pychess.github.io
+- Project homepage: https://pychess.github.io/
 - Download page: https://github.com/pychess/pychess/releases
 - Development page: https://github.com/pychess/pychess
 - Translations: https://www.transifex.com/projects/p/pychess/
 - Mailing list: http://groups.google.com/group/pychess-people
-- Chat: http://webchat.freenode.net/?channels=pychess&uio=d4
-- pychess-engine playing on lichess.org https://lichess.org/@/PyChessBot
+- Chat: https://discord.gg/aPs8RKr
