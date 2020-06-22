@@ -283,6 +283,7 @@ class RemoteGameTestCase(unittest.TestCase):
                  ('https://pychess.ORG/tALxtipo', True),                    # Makruk
                  ('https://pychess.org/2CKjayxv?param', True),              # Cambodian
                  ('https://PYCHESS.ORG/4x0kQ8kY', True),                    # Sittuyin
+                 ('https://pychess.org/7cqV5j2N', True),                    # Seirawan
                  ('http://pychess.org', False)]                             # Not a game (homepage)
         self.executeTest(InternetGamePychess(), links)
 
