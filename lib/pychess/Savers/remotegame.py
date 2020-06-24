@@ -1426,7 +1426,7 @@ class InternetGameChessCom(InternetGameInterface):
         rxp = re.compile(r'^https?:\/\/(\S+\.)?chess\.com\/([a-z\/]+)?(puzzles)\/problem\/([0-9]+)[\/\?\#]?', re.IGNORECASE)
         m = rxp.match(url)
         if m is not None:
-            self.url_type = m.group(3)
+            self.url_type = m.group(3).lower()
             self.id = m.group(4)
             return True
 
@@ -1434,7 +1434,7 @@ class InternetGameChessCom(InternetGameInterface):
         rxp = re.compile(r'^https?:\/\/(\S+\.)?chess\.com\/([a-z\/]+)?(live|daily)\/([a-z\/]+)?([0-9]+)[\/\?\#]?', re.IGNORECASE)
         m = rxp.match(url)
         if m is not None:
-            self.url_type = m.group(3)
+            self.url_type = m.group(3).lower()
             self.id = m.group(5)
             return True
         return False

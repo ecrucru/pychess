@@ -2,10 +2,11 @@
 
 import unittest
 
-from pychess.Utils.const import SCHESS, E1, H1, G1, F3, HAWK_GATE, ELEPHANT_GATE, HAWK_GATE_AT_ROOK, ELEPHANT_GATE_AT_ROOK
+from pychess.Utils.const import SCHESS, A1, C1, E1, H1, G1, F3, HAWK_GATE, ELEPHANT_GATE, HAWK_GATE_AT_ROOK, ELEPHANT_GATE_AT_ROOK, QUEEN_CASTLE
 from pychess.Utils import Move
-# from pychess.Utils.lutils.bitboard import toString
+from pychess.Utils.lutils.bitboard import toString
 from pychess.Utils.lutils.LBoard import LBoard
+from pychess.Utils.lutils.ldata import brank8
 from pychess.Utils.lutils.lmove import parseAN, toAN, parseSAN, toSAN
 from pychess.Utils.lutils.lmovegen import genAllMoves, newMove
 from pychess.Variants.seirawan import SCHESSSTART, SchessBoard
@@ -183,6 +184,53 @@ class SchessTestCase(unittest.TestCase):
 
         board.popMove()
         self.assertEqual(placement(board.asFen()), placement(fen))
+
+    def test_disambig_gating_san(self):
+        FEN = "rnbqkb1r/ppp1pppp/3p1n2/8/2PP4/2N5/PP2PPPP/RHBQKBNR[Eeh] b KQACDEFGHkqabcdefh - 1 3"
+        board = LBoard(SCHESS)
+        board.applyFen(FEN)
+
+        moves = set()
+        for move in genAllMoves(board):
+            moves.add(toAN(board, move))
+        print("--------")
+        print(board)
+
+        self.assertIn("f6d7", moves)
+        self.assertNotIn("f6d7/H", moves)
+        self.assertNotIn("f6d7/E", moves)
+        self.assertIn("b8d7", moves)
+        self.assertIn("b8d7h", moves)
+        self.assertIn("b8d7e", moves)
+
+        self.assertEqual(repr(Move.Move(parseSAN(board, 'Nfd7'))), 'f6d7')
+        self.assertEqual(repr(Move.Move(parseSAN(board, 'Nbd7'))), 'b8d7')
+        self.assertEqual(repr(Move.Move(parseSAN(board, 'Nbd7/H'))), 'b8d7h')
+        self.assertEqual(repr(Move.Move(parseSAN(board, 'Nbd7/E'))), 'b8d7e')
+
+    def test_default_gating_avail(self):
+        board = LBoard(SCHESS)
+        board.applyFen(SCHESSSTART)
+
+        print(board)
+        print(toString(board.virgin[0]))
+        print(toString(board.virgin[1]))
+
+        self.assertEqual(board.virgin[0], brank8[1])
+        self.assertEqual(board.virgin[1], brank8[0])
+
+    def test_gating_castle_at_rook_wOOO_SAN(self):
+        FEN = "r2ek2r/5pp1/1pp1pnp1/2pp1h2/3P4/2P1PP2/PP1N2PP/R3K1HR/E w KQHEAkq - 2 16"
+        board = LBoard(SCHESS)
+        board.applyFen(FEN)
+
+        self.assertEqual(repr(Move.Move(parseSAN(board, 'O-O-O'))), 'e1c1')
+        self.assertEqual(repr(Move.Move(parseSAN(board, 'O-O-O/Ea1'))), 'a1e1e')
+        self.assertEqual(repr(Move.Move(parseSAN(board, 'O-O-O/Ee1'))), 'e1c1e')
+
+        self.assertEqual(toSAN(board, newMove(E1, C1, QUEEN_CASTLE)), "O-O-O")
+        self.assertEqual(toSAN(board, newMove(A1, E1, ELEPHANT_GATE_AT_ROOK)), "O-O-O/Ea1")
+        self.assertEqual(toSAN(board, newMove(E1, C1, ELEPHANT_GATE)), "O-O-O/Ee1")
 
 
 if __name__ == '__main__':
