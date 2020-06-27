@@ -1,7 +1,9 @@
 import unittest
 import random
 
-from pychess.Savers.remotegame import InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameSchacharena, InternetGameChesspuzzle, InternetGameChessking, InternetGameIdeachess, InternetGameChessdb, InternetGameChesspro, InternetGameFicgs, InternetGameChessbase, InternetGamePlayok, InternetGamePychess, InternetGameGeneric
+from pychess.Savers.remotegame import get_internet_game_providers, InternetGameLichess, InternetGameChessgames, InternetGameFicsgames, InternetGameChesstempo, InternetGameChess24, InternetGame365chess, InternetGameChesspastebin, InternetGameChessbomb, InternetGameThechessworld, InternetGameChessOrg, InternetGameEuropeechecs, InternetGameGameknot, InternetGameChessCom, InternetGameSchachspielen, InternetGameRedhotpawn, InternetGameChesssamara, InternetGame2700chess, InternetGameIccf, InternetGameSchacharena, InternetGameChesspuzzle, InternetGameChessking, InternetGameIdeachess, InternetGameChessdb, InternetGameChesspro, InternetGameFicgs, InternetGameChessbase, InternetGamePlayok, InternetGamePychess, InternetGameGeneric
+
+cplist = get_internet_game_providers()
 
 
 class RemoteGameTestCase(unittest.TestCase):
@@ -10,8 +12,14 @@ class RemoteGameTestCase(unittest.TestCase):
         if cp is None or links is None or len(links) == 0:
             return
         print("\n%s" % cp.get_description())
+        if cp.get_description() not in cplist:
+            print('- Skipping unlisted chess provider')
+            return
         if not cp.is_enabled():
             print('- Skipping disabled chess provider')
+            return
+        if cp.is_async():
+            print('- Skipping asynchronous chess provider')
             return
 
         # Pick one link only to not overload the remote server
@@ -20,6 +28,7 @@ class RemoteGameTestCase(unittest.TestCase):
         print('- Expecting data: %s' % expected)
 
         # Download link
+        cp.reset()
         if not cp.assign_game(url):
             data = None
         else:
@@ -32,6 +41,8 @@ class RemoteGameTestCase(unittest.TestCase):
         # Result
         ok = data is not None
         print('- Fetched data: %s' % ok)
+        if ok:
+            print(data)
         self.assertEqual(ok, expected)
 
     def testLichess(self):
