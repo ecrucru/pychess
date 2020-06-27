@@ -65,8 +65,8 @@ class InternetGameInterface:
         return proto == CAT_WS
 
     def get_description(self):
-        name, proto = self.get_identity()
-        return '%s -- %s' % (name, proto)
+        name, _ = self.get_identity()
+        return '%s' % name
 
     def get_game_id(self):
         ''' Return the unique identifier of the game that was detected after a successful call to assign_game().
@@ -2420,7 +2420,7 @@ chess_providers = [InternetGameLichess(),
 
 # Get the list of chess providers
 def get_internet_game_providers():
-    list = [cp.get_description() for cp in chess_providers]
+    list = [cp.get_description() for cp in chess_providers if cp.is_enabled()]
     list.sort()
     return list
 
