@@ -2,7 +2,8 @@
 
 import unittest
 
-from pychess.Utils.const import SCHESS, A1, C1, E1, H1, G1, F3, HAWK_GATE, ELEPHANT_GATE, HAWK_GATE_AT_ROOK, ELEPHANT_GATE_AT_ROOK, QUEEN_CASTLE
+from pychess.Utils.const import SCHESS, A1, C1, E1, H1, G1, F3, BLACK, WHITE, ROOK, HAWK, ELEPHANT, \
+    HAWK_GATE, ELEPHANT_GATE, HAWK_GATE_AT_ROOK, ELEPHANT_GATE_AT_ROOK, QUEEN_CASTLE
 from pychess.Utils import Move
 from pychess.Utils.lutils.bitboard import toString
 from pychess.Utils.lutils.LBoard import LBoard
@@ -57,11 +58,27 @@ class SchessTestCase(unittest.TestCase):
     def test_board(self):
         FEN = "r2qk2r/pppbbppp/4pn2/1N1p4/1n1P4/4PN2/PPPBBPPP/R2QK2R[heHE] w KQkq - 10 8"
         board = SchessBoard(setup=FEN)
-        print("--------")
-        print(board)
+        # print("--------")
+        # print(board)
+        self.assertEqual(board.data[0][7].color, WHITE)
+        self.assertEqual(board.data[0][7].piece, ROOK)
 
-        new_board = board.move(Move.Move(parseSAN(board.board, 'O-O/Hh1')))
-        new_board.printPieces()
+        board = board.move(Move.Move(parseSAN(board.board, 'O-O/Hh1')))
+        # board.printPieces()
+
+        self.assertEqual(board.data[0][7].color, WHITE)
+        self.assertEqual(board.data[0][7].piece, HAWK)
+
+        moves = "c3 c5 e3 d5 Nf3/E Nc6/H d4 e5 Nxe5 Nxe5 dxe5 Hxe5 e4 Nf6 Bf4/H Hc6 e5 Nd7 Be2 Nxe5 Bxe5 Hxe5 Bb5+ Bd7 Ee2 Bd6 Exe5+ Bxe5 Bxd7+ Qxd7/E"
+        board = SchessBoard(setup=SCHESSSTART)
+        for san in moves.split():
+            move = parseSAN(board.board, san)
+            board = board.move(Move.Move(move))
+            # print(san)
+            # board.printPieces()
+
+        self.assertEqual(board.data[7][3].color, BLACK)
+        self.assertEqual(board.data[7][3].piece, ELEPHANT)
 
     def test_gating_san_move(self):
         board = LBoard(SCHESS)
@@ -218,6 +235,21 @@ class SchessTestCase(unittest.TestCase):
 
         self.assertEqual(board.virgin[0], brank8[1])
         self.assertEqual(board.virgin[1], brank8[0])
+
+        board = LBoard(SCHESS)
+        FEN = "r1hqerk1/pp1nbppp/2pp1nb1/4p3/2PPP3/2N1B1PP/PP2NPB1/RH1QK2R/E w KQHEDA - 2 10"
+        board.applyFen(FEN)
+        print("-----------")
+        print(board)
+
+        move = parseSAN(board, "O-O")
+        board.applyMove(move)
+        castl = board.asFen().split()[2]
+
+        self.assertNotIn("Q", castl)
+        self.assertNotIn("K", castl)
+        self.assertNotIn("E", castl)
+        self.assertNotIn("H", castl)
 
     def test_gating_castle_at_rook_wOOO_SAN(self):
         FEN = "r2ek2r/5pp1/1pp1pnp1/2pp1h2/3P4/2P1PP2/PP1N2PP/R3K1HR/E w KQHEAkq - 2 16"
