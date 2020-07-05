@@ -2155,7 +2155,7 @@ It will search positions from http://www.k4it.de/</property>
                                 <property name="spacing">4</property>
                                 <property name="homogeneous">True</property>
                                 <child>
-                                  <object class="GtkButton" id="button7">
+                                  <object class="GtkButton" id="button9">
                                     <property name="use_action_appearance">False</property>
                                     <property name="can_focus">True</property>
                                     <property name="receives_default">False</property>
@@ -2207,7 +2207,7 @@ It will search positions from http://www.k4it.de/</property>
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="GtkButton" id="button6">
+                                  <object class="GtkButton" id="button8">
                                     <property name="use_action_appearance">False</property>
                                     <property name="can_focus">True</property>
                                     <property name="receives_default">False</property>
@@ -4321,6 +4321,98 @@ It will search positions from http://www.k4it.de/</property>
                 <property name="position">4</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkButton" id="button6">
+                <property name="height_request">60</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="can_default">True</property>
+                <property name="receives_default">True</property>
+                <child>
+                  <object class="GtkVBox" id="vbox1">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <child>
+                      <object class="GtkAlignment" id="hawkDock">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <child>
+                          <placeholder/>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="expand">True</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="label84">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Hawk</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">False</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">5</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="button7">
+                <property name="height_request">60</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="can_default">True</property>
+                <property name="receives_default">True</property>
+                <child>
+                  <object class="GtkVBox" id="vbox6">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <child>
+                      <object class="GtkAlignment" id="elephantDock">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <child>
+                          <placeholder/>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="expand">True</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="label85">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Elephant</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">False</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">6</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -4335,7 +4427,7 @@ It will search positions from http://www.k4it.de/</property>
             <property name="can_focus">False</property>
             <property name="xpad">13</property>
             <property name="ypad">6</property>
-            <property name="label" translatable="yes">&lt;b&gt;&lt;big&gt;Promote pawn to what?&lt;/big&gt;&lt;/b&gt;</property>
+            <property name="label" translatable="yes">&lt;b&gt;&lt;big&gt;Promote pawn to&lt;/big&gt;&lt;/b&gt;</property>
             <property name="use_markup">True</property>
             <property name="xalign">0</property>
           </object>
@@ -4353,6 +4445,8 @@ It will search positions from http://www.k4it.de/</property>
       <action-widget response="2">button3</action-widget>
       <action-widget response="3">button4</action-widget>
       <action-widget response="4">button5</action-widget>
+      <action-widget response="5">button6</action-widget>
+      <action-widget response="6">button7</action-widget>
     </action-widgets>
   </object>
   <object class="GtkImage" id="image_stock_folder1">
@@ -5631,6 +5725,9 @@ If it can use both  you can set here which one you like.</property>
     <property name="type_hint">dialog</property>
     <property name="skip_taskbar_hint">True</property>
     <property name="transient_for">manage_engines_dialog</property>
+    <child>
+      <placeholder/>
+    </child>
     <child internal-child="vbox">
       <object class="GtkBox" id="massBox1">
         <property name="can_focus">False</property>
