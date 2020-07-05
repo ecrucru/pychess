@@ -1,5 +1,4 @@
 import os
-import sys
 import re
 import json
 from urllib.request import Request, urlopen
@@ -16,7 +15,6 @@ from pychess import VERSION
 from pychess.Utils.const import CRAZYHOUSECHESS, FISCHERRANDOMCHESS, reprResult
 from pychess.Utils.lutils.LBoard import LBoard
 from pychess.Utils.lutils.lmove import parseAny, toSAN
-from pychess.widgets import newGameDialog
 from pychess.System.cpu import get_cpu
 from pychess.System.Log import log
 from pychess.System.useragent import generate_user_agent
@@ -57,12 +55,7 @@ class InternetGameInterface:
 
     def is_enabled(self):
         ''' Override this method in the sub-class to disable a chess provider temporarily. '''
-        _, proto = self.get_identity()
-        return (proto != CAT_WS) or (sys.version_info.major >= 3 and sys.version_info.minor >= 5)  # Async WS needs 3.5 for SSL
-
-    def is_async(self):
-        _, proto = self.get_identity()
-        return proto == CAT_WS
+        return True
 
     def get_description(self):
         name, _ = self.get_identity()
@@ -198,6 +191,16 @@ class InternetGameInterface:
             return None
         else:
             return pgn
+
+    def async_from_sync(self, coro):
+        ''' The method is used for the WebSockets technique to call an asynchronous task from a synchronous task. '''
+        curloop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(coro)
+        loop.close()
+        asyncio.set_event_loop(curloop)
+        return result
 
     def send_xhr(self, url, postData, userAgent=False):
         ''' Call a target URL by submitting the POSTDATA.
@@ -626,24 +629,25 @@ class InternetGameChesstempo(InternetGameInterface):
                 return True
         return False
 
-    @asyncio.coroutine
     def download_game(self):
         # Check
         if None in [self.id, self.url_type]:
-            return
+            return None
 
         # Games
         if self.url_type == TYPE_GAME:
             pgn = self.download('http://chesstempo.com/requests/download_game_pgn.php?gameids=%s' % self.id, userAgent=True)  # Else a random game is retrieved
-            if pgn is not None and len(pgn) > 128:
-                self.data = pgn
+            if pgn is None or len(pgn) <= 128:
+                return None
+            else:
+                return pgn
 
         # Puzzles
         elif self.url_type == TYPE_PUZZLE:
 
             # Open a websocket to retrieve the puzzle
             @asyncio.coroutine
-            def coro(self):
+            def coro():
                 result = None
                 ws = yield from websockets.connect('wss://chesstempo.com:443/ws', origin='https://chesstempo.com', extra_headers=[('User-agent', self.userAgent)], ping_interval=None)
                 try:
@@ -670,14 +674,14 @@ class InternetGameChesstempo(InternetGameInterface):
                                     result = None
                 finally:
                     yield from ws.close()
-                self.data = result
+                return result
 
-            yield from coro(self)
-            if self.data is None:
-                return
+            data = self.async_from_sync(coro())
+            if data is None:
+                return None
 
             # Rebuild the puzzle
-            puzzle = self.json_loads(self.data)
+            puzzle = self.json_loads(data)
             game = {}
             game['_url'] = 'https://chesstempo.com/chess-tactics/%s' % self.id
             game['Event'] = 'Puzzle %s' % self.json_field(puzzle, 'tacticInfo/problem_id')
@@ -687,7 +691,9 @@ class InternetGameChesstempo(InternetGameInterface):
             game['FEN'] = self.json_field(puzzle, 'tacticInfo/startPosition')
             game['SetUp'] = '1'
             game['_moves'] = '{%s} %s' % (self.json_field(puzzle, 'tacticInfo/prevmove'), self.json_field(puzzle, 'tacticInfo/moves'))
-            self.data = self.rebuild_pgn(game)
+            return self.rebuild_pgn(game)
+
+        return None
 
 
 # Chess24.com
@@ -1056,17 +1062,16 @@ class InternetGameChessOrg(InternetGameInterface):
                 return True
         return False
 
-    @asyncio.coroutine
     def download_game(self):
         # Check
         if self.id is None:
-            return
+            return None
 
         # Fetch the page to retrieve the encrypted user name
         url = 'https://chess.org/play/%s' % self.id
         page = self.download(url)
         if page is None:
-            return
+            return None
         lines = page.split("\n")
         name = ''
         for line in lines:
@@ -1078,7 +1083,7 @@ class InternetGameChessOrg(InternetGameInterface):
                     name = line[pos1 + 1:pos2]
                     break
         if name == '':
-            return
+            return None
 
         # Random elements to get a unique URL
         rndI = randint(1, 1000)
@@ -1086,32 +1091,35 @@ class InternetGameChessOrg(InternetGameInterface):
 
         # Open a websocket to retrieve the chess data
         @asyncio.coroutine
-        def coro(self):
+        def coro():
             url = 'wss://chess.org:443/play-sockjs/%d/%s/websocket' % (rndI, rndS)
             log.debug('Websocket connecting to %s' % url)
             ws = yield from websockets.connect(url, origin="https://chess.org:443", ping_interval=None)
             try:
                 # Server: Hello
                 data = yield from ws.recv()
-                if data == 'o':  # Open
-                    # Client: I am XXX, please open the game YYY
-                    yield from ws.send('["%s %s"]' % (name, self.id))
-                    data = yield from ws.recv()
+                if data != 'o':  # Open
+                    yield from ws.close()
+                    return None
 
-                    # Server: some data
-                    if data[:1] == 'a':
-                        data = data[3:-2]
-                        if data not in [None, '']:
-                            self.data = data
+                # Client: I am XXX, please open the game YYY
+                yield from ws.send('["%s %s"]' % (name, self.id))
+                data = yield from ws.recv()
+
+                # Server: some data
+                if data[:1] != 'a':
+                    yield from ws.close()
+                    return None
+                return data[3:-2]
             finally:
                 yield from ws.close()
 
-        yield from coro(self)
-        if self.data is None:
-            return
+        data = self.async_from_sync(coro())
+        if data in [None, '']:
+            return None
 
         # Parses the game
-        chessgame = self.json_loads(self.data.replace('\\"', '"'))
+        chessgame = self.json_loads(data.replace('\\"', '"'))
         game = {}
         game['_url'] = url
         board = LBoard(variant=FISCHERRANDOMCHESS)
@@ -1141,8 +1149,7 @@ class InternetGameChessOrg(InternetGameInterface):
             try:
                 board.applyFen(startPos)
             except Exception:
-                self.data = None
-                return
+                return None
         else:
             board.applyFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w AHah - 0 1')
         time = self.json_field(chessgame, 'timeLimitSecs')
@@ -1180,8 +1187,7 @@ class InternetGameChessOrg(InternetGameInterface):
         game['_moves'] = ''
         moves = self.json_field(chessgame, 'lans')
         if moves == '':
-            self.data = None
-            return
+            return None
         moves = moves.split(' ')
         for move in moves:
             try:
@@ -1192,11 +1198,10 @@ class InternetGameChessOrg(InternetGameInterface):
                 else:
                     game['_moves'] += move + ' '
             except Exception:
-                self.data = None
-                return
+                return None
 
         # Rebuild the PGN game
-        self.data = self.rebuild_pgn(game)
+        return self.rebuild_pgn(game)
 
 
 # Europe-Echecs.com
@@ -2307,15 +2312,14 @@ class InternetGamePychess(InternetGameInterface):
         # Nothing found
         return False
 
-    @asyncio.coroutine
     def download_game(self):
         # Check
         if self.id is None:
-            return
+            return None
 
         # Open a websocket to retrieve the game
         @asyncio.coroutine
-        def coro(self):
+        def coro():
             result = None
             ws = yield from websockets.connect('wss://www.pychess.org/wsr', origin="https://www.pychess.org", ping_interval=None)
             try:
@@ -2328,9 +2332,10 @@ class InternetGamePychess(InternetGameInterface):
                         break
             finally:
                 yield from ws.close()
-            self.data = result
+            return result
 
-        yield from coro(self)
+        data = self.async_from_sync(coro())
+        return data
 
 
 # Generic
@@ -2444,11 +2449,7 @@ def get_internet_game_as_pgn(url):
             # Download
             log.debug('Responding chess provider: %s' % prov.get_description())
             try:
-                if prov.is_async():
-                    yield from prov.download_game()
-                    pgn = prov.data
-                else:
-                    pgn = prov.download_game()
+                pgn = prov.download_game()
                 pgn = prov.sanitize(pgn)
             except Exception as e:
                 pgn = None
@@ -2462,12 +2463,5 @@ def get_internet_game_as_pgn(url):
                 return pgn
     return None
 
-
-def get_internet_game(url):
-    if url in [None, '']:
-        return False
-    else:
-        data = yield from get_internet_game_as_pgn(url.strip())
-        return newGameDialog.loadPgnAndRun(data)
 
 # print(get_internet_game_as_pgn(''))

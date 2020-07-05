@@ -18,9 +18,6 @@ class RemoteGameTestCase(unittest.TestCase):
         if not cp.is_enabled():
             print('- Skipping disabled chess provider')
             return
-        if cp.is_async():
-            print('- Skipping asynchronous chess provider')
-            return
 
         # Pick one link only to not overload the remote server
         url, expected = random.choice(links)
