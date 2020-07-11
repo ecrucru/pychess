@@ -1,2 +1,3 @@
-python3 pgn2ecodb.py
+set PYTHONPATH=./lib
+python pgn2ecodb.py
 @pause
