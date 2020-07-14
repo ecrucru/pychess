@@ -94,7 +94,7 @@ python 3.4.4
 python -m pip install --upgrade pip
 pip install sqlalchemy
 pip install pexpect
-pip install psutil
+pip install psutil==3.4.2
 PyGObject (from http://sourceforge.net/projects/pygobjectwin32)
   Base packages
   GDK-Pixbuf
