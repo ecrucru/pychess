@@ -80,9 +80,7 @@ class DiscovererDialog:
 
     @asyncio.coroutine
     def all_whatcher(self):
-        while True:
-            yield from wait_signal(self.discoverer, "all_engines_discovered")
-            break
+        yield from wait_signal(self.discoverer, "all_engines_discovered")
 
         self.finished = True
         self.close()
